@@ -8,10 +8,13 @@
 
   var S = global.Saju;
   var F = global.Fortune;
+  var T = global.Themes;
   var doc = document;
 
   var ELEM_CLASS = { '목': 'mok', '화': 'hwa', '토': 'to', '금': 'geum', '수': 'su' };
   var PAGE = doc.body ? doc.body.getAttribute('data-page') : '';
+  var PROFILE_KEY = 'saju-profile';
+  var pendingTheme = null;
 
   function qs(sel, root) { return (root || doc).querySelector(sel); }
   function qsa(sel, root) { return Array.prototype.slice.call((root || doc).querySelectorAll(sel)); }
@@ -72,17 +75,66 @@
     }, step);
   }
 
-  /* ---------- 상단 내비 현재 페이지 표시 ---------- */
+  /* ---------- 하단 탭바 현재 페이지 표시 ---------- */
   function markNav() {
-    qsa('.nav a').forEach(function (a) {
-      var href = a.getAttribute('href');
-      if (!href) return;
-      if (href === PAGE || (PAGE === 'index' && href === 'index.html') ||
-        (PAGE === 'index' && href === './') ||
-        (PAGE !== 'index' && href.indexOf(PAGE) === 0)) {
-        a.classList.add('on');
-      }
+    var tab = PAGE === 'index' ? 'home'
+      : PAGE.indexOf('compat') === 0 ? 'compat'
+        : PAGE.indexOf('newyear') === 0 ? 'newyear'
+          : PAGE === 'guide' ? 'guide' : '';
+    qsa('.tabbar a').forEach(function (a) {
+      if (a.getAttribute('data-tab') === tab) a.classList.add('on');
+      a.addEventListener('click', function () {
+        if (a.getAttribute('data-tab') === 'saju' && PAGE === 'index') {
+          qsa('.tabbar a').forEach(function (x) { x.classList.remove('on'); });
+          a.classList.add('on');
+        }
+      });
     });
+  }
+
+  /* ---------- 입력값 저장 / 복원 ---------- */
+  function saveProfile(p) {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+      localStorage.setItem('saju-last', JSON.stringify({
+        name: p.name, y: p.year, m: p.month, d: p.day, cal: p.calendar, gender: p.gender
+      }));
+    } catch (e) { }
+  }
+
+  function readProfile() {
+    try {
+      var p = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+      if (p && p.year && p.month && p.day) return p;
+      /* 예전 버전이 남긴 saju-last 도 읽는다 */
+      var old = JSON.parse(localStorage.getItem('saju-last') || 'null');
+      if (old && old.y) {
+        return {
+          year: old.y, month: old.m, day: old.d, hour: null, minute: 0,
+          calendar: old.cal || 'solar', leap: false, gender: old.gender || 'm', name: old.name || ''
+        };
+      }
+    } catch (e) { }
+    return null;
+  }
+
+  function buildFromProfile() {
+    var p = readProfile();
+    if (!p) return null;
+    var chart = S.build(p);
+    return chart && !chart.error ? chart : null;
+  }
+
+  function themeFromHash() {
+    var m = /^#theme-([a-z-]+)$/.exec(location.hash || '');
+    return m && T.map[m[1]] ? m[1] : null;
+  }
+
+  function setHash(key) {
+    try {
+      var h = key ? '#theme-' + key : '#result';
+      if (location.hash !== h) history.replaceState(null, '', h);
+    } catch (e) { }
   }
 
   /* ---------- 히어로 말풍선 문구 순환 ---------- */
@@ -90,9 +142,9 @@
     var box = qs('#hero-bubble-text');
     if (!box) return;
     var lines = [
-      '어서 오게. 생년월일만 알려주면 내가 여덟 글자를 풀어주지.',
+      '어서 오게. 생일만 알려주면 여덟 글자를 풀어주지.',
       '사주는 정해진 운명이 아니라 타고난 재료일 뿐이라네.',
-      '2027년 정미년, 붉은 양의 해 기운도 함께 봐주겠네. 허허.'
+      '2027년 붉은 양의 기운도 함께 봐주겠네. 허허.'
     ];
     var k = 0;
     function next() {
@@ -198,10 +250,11 @@
       '<div class="deep-body">' + body + '</div></article>';
   }
 
-  function renderResult(chart) {
+  function renderResult(chart, themeKey) {
     lastChart = chart;
     lastLines = F.mascotLines(chart);
     var deep = F.deep(chart);
+    var theme = themeKey && T && T.map[themeKey] ? T.map[themeKey] : null;
     var g = F.GAN[chart.dayMaster.gan];
     var j = F.JI[chart.pillars.day.ji];
     var name = chart.input.name || '나';
@@ -222,10 +275,31 @@
     var readMin = Math.max(1, Math.round(deep.totalChars / 480));
 
     var html = '';
+
+    /* 테마 배너 */
+    if (theme) {
+      html += '<div class="theme-banner" data-tone="' + theme.tone + '">' +
+        '<span class="tb-glyph" aria-hidden="true">' + theme.glyph + '</span>' +
+        '<div class="tb-main"><div class="tb-cat">' + esc(theme.catLabel) + '</div>' +
+        '<h2 class="tb-name">' + esc(theme.name) + '</h2></div>' +
+        '<div class="tb-badge">' + badgeHTML(theme) + '</div></div>';
+    }
+
     html += '<div class="result-top">' +
       '<h2>' + (chart.input.name ? esc(name) + '님의 사주팔자' : '나의 사주팔자') + '</h2>' +
       '<div class="meta">' + esc(calTxt) + ' · ' + timeTxt + ' · ' + (chart.input.gender === 'f' ? '여성' : '남성') + '</div>' +
       '</div>';
+
+    /* 테마 초점 순서 */
+    var secs = deep.sections.slice();
+    if (theme && theme.focus && theme.focus.length) {
+      var ordered = [], used = {};
+      theme.focus.forEach(function (k) {
+        if (deep.byKey[k] && !used[k]) { ordered.push(deep.byKey[k]); used[k] = true; }
+      });
+      secs.forEach(function (s) { if (!used[s.key]) ordered.push(s); });
+      secs = ordered;
+    }
 
     html += '<div class="pillars">' +
       pillarHTML('시주', chart.pillars.hour, false) +
@@ -276,7 +350,7 @@
     /* 심층 리포트 */
     html += '<div class="report-head">' +
       '<div class="report-kicker">DEEP READING</div>' +
-      '<h3>심층 리포트 · 7가지 항목</h3>' +
+      '<h3>' + (theme ? esc(theme.name) + ' · ' : '') + '심층 리포트 7가지</h3>' +
       '<p>일간·일지·십신·신강신약·용신·대운·2027 세운을 겹쳐 읽은 풀이입니다. 약 ' +
       deep.totalChars.toLocaleString('ko-KR') + '자, 읽는 시간 약 ' + readMin + '분.</p>' +
       '<div class="report-tools">' +
@@ -286,12 +360,18 @@
       '</div>';
 
     html += '<nav class="report-toc" aria-label="심층 리포트 목차">' +
-      deep.sections.map(function (s) {
+      secs.map(function (s) {
         return '<a href="#sec-' + s.key + '" data-jump="' + s.key + '">' + s.no + ' ' + esc(s.title) + '</a>';
       }).join('') + '</nav>';
 
     html += '<div class="deep-list">' +
-      deep.sections.map(function (s, i) { return deepSectionHTML(s, i, deep.sections.length, deep.sections[i + 1] ? deep.sections[i + 1].title : ''); }).join('') +
+      secs.map(function (s, i) {
+        var art = deepSectionHTML(s, i, secs.length, secs[i + 1] ? secs[i + 1].title : '');
+        if (theme && theme.focus && theme.focus.indexOf(s.key) >= 0) {
+          art = art.replace('class="card deep-sec', 'class="card deep-sec focus');
+        }
+        return art;
+      }).join('') +
       '</div>';
 
     /* 액션 */
@@ -302,6 +382,21 @@
       '<a class="btn btn-ghost" href="compatibility.html">궁합 보기</a>' +
       '<button class="btn btn-ghost" id="again-btn">다시 풀기</button>' +
       '</div>';
+
+    /* 다른 테마로 보기 */
+    if (theme) {
+      var others = T.list.filter(function (t) {
+        return t.key !== theme.key && t.cat === theme.cat && t.focus.length;
+      }).concat(T.list.filter(function (t) {
+        return t.key !== theme.key && t.cat !== theme.cat && t.focus.length;
+      })).slice(0, 8);
+      html += '<div class="theme-switch"><h4>같은 사주로 다른 테마 보기</h4><div class="chips">' +
+        others.map(function (t) {
+          return '<button type="button" class="chip" data-theme="' + t.key + '">' + esc(t.name) + '</button>';
+        }).join('') +
+        '<a class="chip" href="compatibility.html">궁합 사주</a>' +
+        '</div></div>';
+    }
 
     html += '<p class="note">이 결과는 사주 명리학의 기본 규칙(절기·입춘 기준)으로 계산한 참고용 풀이입니다. 일주는 자정(00:00)에 바뀌는 것으로 계산했고, 태어난 시각을 모르면 시주를 뺀 여섯 글자로 풀이합니다. 대운은 3일=1년 환산으로 시작 나이를 근사했고, 용신은 계절·세력 분포·조후를 함께 본 근사치입니다. 운세는 재미와 참고로만 봐 주세요.</p>';
 
@@ -321,7 +416,8 @@
         showTalk(b.getAttribute('data-k'));
       });
     });
-    showTalk('greeting');
+    if (theme && T.intro) typeText(talkText, T.intro(theme, chart), 20);
+    else showTalk('greeting');
 
     /* 아코디언 */
     function openSection(sec, scroll) {
@@ -376,12 +472,144 @@
     qs('#again-btn').addEventListener('click', function () {
       var r = qs('#result');
       r.classList.remove('show');
+      setHash(null);
       qs('#saju-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+    qsa('.theme-switch [data-theme]').forEach(function (b) {
+      b.addEventListener('click', function () { openTheme(b.getAttribute('data-theme'), chart); });
     });
 
     var res = qs('#result');
     res.classList.add('show');
-    setTimeout(function () { res.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 60);
+    setTimeout(scrollResult, 60);
+  }
+
+  /* ---------- 테마 카드 / 피드 ---------- */
+  function badgeHTML(t) {
+    if (!t.badge) return '';
+    var cls = t.badge === 'BEST' ? 'best' : t.badge === '인기' ? 'pop' : 'rec';
+    var label = t.badge === 'BEST' ? '★ BEST' : t.badge;
+    return '<span class="badge ' + cls + '">' + label + '</span>';
+  }
+
+  function fcardHTML(t) {
+    return '<button type="button" class="fcard" data-tone="' + t.tone + '" data-theme="' + t.key + '" aria-label="' + esc(t.name) + ' 무료로 보기">' +
+      '<span class="fcard-art">' +
+      '<span class="fcard-glyph" aria-hidden="true">' + t.glyph + '</span>' +
+      '<span class="fcard-top">' + badgeHTML(t) + '</span>' +
+      '<span class="fcard-hook">' + t.hook + '</span>' +
+      '<span class="fcard-quote">“' + esc(t.quote) + '”</span>' +
+      '<span class="fcard-cta">무료로 보기 →</span>' +
+      '</span>' +
+      '<img class="fcard-mascot" src="mascot.webp" alt="" width="120" height="201" loading="lazy" decoding="async">' +
+      '</button>';
+  }
+
+  function tcardHTML(t) {
+    return '<button type="button" class="tcard" data-tone="' + t.tone + '" data-theme="' + t.key + '">' +
+      '<span class="tcard-art">' +
+      '<span class="tcard-glyph" aria-hidden="true">' + t.glyph + '</span>' +
+      (t.badge ? '<span class="tcard-badge">' + badgeHTML(t) + '</span>' : '') +
+      '<span class="tcard-hook">' + t.hook + '</span>' +
+      '<img class="tcard-mascot" src="mascot.webp" alt="" width="80" height="134" loading="lazy" decoding="async">' +
+      '</span>' +
+      '<span class="tcard-body"><span class="tcard-name">' + esc(t.name) + '</span>' +
+      '<span class="tcard-cta">무료로 보기 →</span>' +
+      '<span class="tcard-sub">' + esc(t.sub) + '</span></span>' +
+      '</button>';
+  }
+
+  function renderFeed() {
+    var chipRow = qs('#chip-row');
+    var host = qs('#feed');
+    if (!chipRow || !host || !T) return;
+
+    chipRow.className = 'chips-row';
+    chipRow.innerHTML = T.cats.map(function (c) {
+      return '<button type="button" class="chip-btn' + (c.key === 'all' ? ' on' : '') + '" data-cat="' + c.key + '" role="tab" aria-selected="' + (c.key === 'all') + '">' + c.label + '</button>';
+    }).join('');
+
+    host.innerHTML = T.cats.filter(function (c) { return c.key !== 'all'; }).map(function (c) {
+      var items = T.list.filter(function (t) { return t.cat === c.key; });
+      return '<section class="feed-sec" data-cat="' + c.key + '" id="cat-' + c.key + '">' +
+        '<div class="sec-head"><span class="sec-kicker">' + c.label + '</span>' +
+        '<h2>' + c.title + '<span class="sec-count">' + items.length + '가지</span></h2>' +
+        '<p>' + c.sub + '</p></div>' +
+        '<div class="tgrid">' + items.map(tcardHTML).join('') + '</div></section>';
+    }).join('');
+
+    var ft = qs('#featured-track');
+    if (ft) {
+      ft.innerHTML = T.list.filter(function (t) { return t.featured && t.focus.length; }).map(fcardHTML).join('');
+      ft.addEventListener('click', function (e) {
+        var b = e.target.closest ? e.target.closest('[data-theme]') : null;
+        if (b) openTheme(b.getAttribute('data-theme'));
+      });
+    }
+
+    chipRow.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-cat]') : null;
+      if (b) filterFeed(b.getAttribute('data-cat'));
+    });
+    host.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('[data-theme]') : null;
+      if (b) openTheme(b.getAttribute('data-theme'));
+    });
+  }
+
+  function filterFeed(cat) {
+    qsa('#chip-row [data-cat]').forEach(function (b) {
+      var on = b.getAttribute('data-cat') === cat;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    var feat = qs('#featured-section');
+    if (feat) feat.classList.toggle('is-hidden', cat !== 'all');
+    qsa('#feed .feed-sec').forEach(function (s) {
+      s.classList.toggle('is-hidden', cat !== 'all' && s.getAttribute('data-cat') !== cat);
+    });
+    var target = cat === 'all' ? qs('#featured-section') : qs('#cat-' + cat);
+    if (target) scrollPastBars(target);
+  }
+
+  function scrollOffset() {
+    var a = qs('.appbar'), c = qs('.chipbar');
+    return (a ? a.offsetHeight : 0) + (c ? c.offsetHeight : 0) + 6;
+  }
+
+  function scrollPastBars(el, smooth) {
+    var top = el.getBoundingClientRect().top + global.pageYOffset - scrollOffset();
+    global.scrollTo({ top: Math.max(0, top), behavior: smooth === false ? 'auto' : 'smooth' });
+  }
+
+  function scrollResult() {
+    var r = qs('#result');
+    if (r) scrollPastBars(r, false);
+  }
+
+  /* 테마 열기: 저장된 생년월일이 있으면 원클릭, 없으면 입력으로 안내 */
+  function openTheme(key, chart) {
+    var t = T && T.map[key];
+    if (!t) return;
+    if (t.href) { location.href = t.href; return; }
+    var c = chart || lastChart || buildFromProfile();
+    if (!c) { pendingTheme = key; askProfile(t); return; }
+    renderResult(c, key);
+    setHash(key);
+  }
+
+  function askProfile(t) {
+    var form = qs('#saju-form');
+    if (!form) { location.href = 'index.html#theme-' + t.key; return; }
+    var hint = qs('#form-hint');
+    if (hint) hint.textContent = '‘' + t.name + '’ 볼 생일만 넣으면 돼';
+    var cal = qs('#cal-hint');
+    if (cal) cal.textContent = '‘' + t.name + '’ 테마로 바로 풀어드리지. 생일과 태어난 시각만 알려주게.';
+    form.classList.remove('attn');
+    void form.offsetWidth;
+    form.classList.add('attn');
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    toast('‘' + t.name + '’를 보려면 생년월일만 알려주게');
   }
 
   function shareText(chart) {
@@ -624,22 +852,22 @@
     m.addEventListener('change', function () { refreshDays(y, m, d); });
 
     var cal = 'solar', gender = 'm';
+    function paintCal(v) {
+      qsa('#cal-seg button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-cal') === v); });
+      qs('#leap-wrap').hidden = v !== 'lunar';
+      var t = qs('#cal-hint');
+      if (t) t.textContent = v === 'lunar'
+        ? '음력 생일이면 윤달 여부도 확인해 주세요. (1900~2035년 지원)'
+        : '주민등록상 생일을 그대로 넣으면 됩니다. 음력은 1900~2035년까지 지원.';
+    }
+    function paintGender(g) {
+      qsa('#gender-seg button').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-g') === g); });
+    }
     qsa('#cal-seg button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        qsa('#cal-seg button').forEach(function (x) { x.classList.remove('on'); });
-        b.classList.add('on');
-        cal = b.getAttribute('data-cal');
-        qs('#leap-wrap').hidden = (cal !== 'lunar');
-        var t = qs('#cal-hint');
-        if (t) t.textContent = cal === 'lunar' ? '음력 생일이면 윤달 여부도 확인해 주세요. (1900~2035년 지원)' : '주민등록상 생일을 그대로 넣으면 됩니다.';
-      });
+      b.addEventListener('click', function () { cal = b.getAttribute('data-cal'); paintCal(cal); });
     });
     qsa('#gender-seg button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        qsa('#gender-seg button').forEach(function (x) { x.classList.remove('on'); });
-        b.classList.add('on');
-        gender = b.getAttribute('data-g');
-      });
+      b.addEventListener('click', function () { gender = b.getAttribute('data-g'); paintGender(gender); });
     });
 
     var noTime = qs('#no-time');
@@ -650,29 +878,40 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var chart = S.build({
-        year: y.value, month: m.value, day: d.value,
-        hour: noTime.checked ? null : h.value,
-        minute: mi.value,
+      var profile = {
+        year: +y.value, month: +m.value, day: +d.value,
+        hour: noTime.checked ? null : +h.value,
+        minute: noTime.checked ? 0 : +mi.value,
         calendar: cal,
         leap: qs('#leap') ? qs('#leap').checked : false,
         gender: gender,
         name: qs('#name').value
-      });
+      };
+      var chart = S.build(profile);
       if (chart.error) { toast(chart.error); return; }
-      renderResult(chart);
-      history.replaceState(null, '', '#result');
-      try { localStorage.setItem('saju-last', JSON.stringify({ name: qs('#name').value, y: y.value, m: m.value, d: d.value, cal: cal, gender: gender })); } catch (err) { }
+      saveProfile(profile);
+      var key = pendingTheme || themeFromHash();
+      pendingTheme = null;
+      renderResult(chart, key);
+      setHash(key);
     });
 
     /* 마지막 입력 복원 */
-    try {
-      var last = JSON.parse(localStorage.getItem('saju-last') || 'null');
-      if (last && last.y) {
-        y.value = last.y; m.value = last.m; refreshDays(y, m, d, last.d);
-        if (last.name) qs('#name').value = last.name;
+    var p = readProfile();
+    if (p) {
+      if (p.calendar === 'lunar') { cal = 'lunar'; paintCal('lunar'); }
+      if (p.leap) { var lw = qs('#leap'); if (lw) lw.checked = true; }
+      if (p.gender === 'f') { gender = 'f'; paintGender('f'); }
+      y.value = p.year; m.value = p.month;
+      refreshDays(y, m, d, p.day);
+      if (p.hour !== null && p.hour !== undefined) {
+        h.value = p.hour; mi.value = p.minute || 0;
+      } else {
+        noTime.checked = true;
+        h.disabled = true; mi.disabled = true;
       }
-    } catch (err) { }
+      if (p.name) qs('#name').value = p.name;
+    }
   }
 
   /* ---------- 궁합 페이지 ---------- */
@@ -761,8 +1000,8 @@
     if (elemHost) {
       elemHost.innerHTML = ['목', '화', '토', '금', '수'].map(function (e) {
         var d = F.ELEM[e];
-        return '<div class="card" style="padding:18px"><h3><span class="dot"></span><span class="e-' + ELEM_CLASS[e] + '">' + e + ' · ' + d.nature + '</span></h3>' +
-          '<p style="font-size:14px;color:var(--muted);margin:8px 0 0">' + esc(d.advice) + '</p>' +
+        return '<div class="card elem-card"><h3><span class="dot"></span><span class="e-' + ELEM_CLASS[e] + '">' + e + ' · ' + d.nature + '</span></h3>' +
+          '<p>' + esc(d.advice) + '</p>' +
           '<div class="chips"><span class="chip">' + d.color + '</span><span class="chip">' + d.place + '</span><span class="chip">' + d.time + '</span><span class="chip">' + d.body + '</span></div></div>';
       }).join('');
     }
@@ -775,8 +1014,8 @@
     var order = ['비견', '겁재', '식신', '상관', '편재', '정재', '정관', '편관', '정인', '편인'];
     host.innerHTML = order.map(function (k) {
       var s = F.SIPSIN[k];
-      return '<div class="card" style="padding:18px"><h3 style="font-size:16px"><span class="dot"></span>' + k + ' <span style="color:var(--muted);font-size:13px">' + s.hanja + '</span></h3>' +
-        '<p style="font-size:14px;color:var(--muted);margin:8px 0 0">' + esc(F.YEAR2027[k]) + '</p></div>';
+      return '<div class="card elem-card"><h3 style="font-size:14.5px"><span class="dot"></span>' + k + ' <span style="color:var(--muted);font-size:11.5px;font-weight:400">' + s.hanja + '</span></h3>' +
+        '<p>' + esc(F.YEAR2027[k]) + '</p></div>';
     }).join('');
   }
 
@@ -784,7 +1023,16 @@
   function init() {
     markNav();
     heroBubbleCycle();
-    if (PAGE === 'index') initHome();
+    if (PAGE === 'index') {
+      renderFeed();
+      initHome();
+      var k = themeFromHash();
+      if (k) setTimeout(function () { openTheme(k); }, 120);
+      global.addEventListener('hashchange', function () {
+        var hk = themeFromHash();
+        if (hk) openTheme(hk);
+      });
+    }
     if (PAGE.indexOf('compat') === 0) initCompat();
     if (PAGE === 'guide') initGuide();
     if (PAGE.indexOf('newyear') === 0) initNewYear();
@@ -793,5 +1041,5 @@
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
   else init();
 
-  global.UI = { toast: toast, typeText: typeText };
+  global.UI = { toast: toast, typeText: typeText, openTheme: openTheme };
 })(window);
