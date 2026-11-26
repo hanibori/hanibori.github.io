@@ -261,7 +261,8 @@
     var yangYear = GAN_YANG[o.yearGan];
     var forward = (yangYear && o.gender === 'm') || (!yangYear && o.gender === 'f');
 
-    var terms = termListAround(o.solar.y);
+    /* 대운수는 24절기 중 절입(節)만 기준으로 센다. 중기(춘분·하지 등)는 쓰지 않는다. */
+    var terms = termListAround(o.solar.y).filter(function (t) { return t.deg % 30 === 15; });
     var idx = 0;
     for (var i = 0; i < terms.length - 1; i++) {
       if (terms[i].jd <= o.birthJd && o.birthJd < terms[i + 1].jd) { idx = i; break; }
