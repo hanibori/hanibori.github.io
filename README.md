@@ -32,11 +32,10 @@ saju-site/
 
 ## 배포
 
-1. GitHub 저장소를 만들고 `saju-site/` 안의 파일을 그대로 올립니다.
-2. Settings → Pages → Branch: `main` / 폴더: `/ (root)` 로 지정하면 `https://아이디.github.io/저장소명/` 에서 열립니다.
-3. 배포 후 아래 두 가지를 바꿔 주세요.
-   - `sitemap.xml` 의 `https://example.com` → 실제 주소 (6곳)
-   - 각 페이지 `<meta property="og:image">` 는 상대경로라 대부분 동작하지만, 카톡 공유 미리보기를 확실히 하려면 절대 주소로 바꾸는 편이 좋습니다.
+현재 배포 주소: **https://hanibori.github.io/unsedosa/** (저장소 `hanibori/unsedosa`, 공개, `main` 브랜치 루트)
+
+1. 다른 곳에 배포할 때는 `sitemap.xml`(6곳), `robots.txt`(`Sitemap:`), 각 페이지 `<meta property="og:image">` 의 `https://hanibori.github.io/unsedosa/` 부분을 새 주소로 바꿉니다.
+2. GitHub 저장소 Settings → Pages → Branch: `main` / 폴더: `/ (root)` 로 지정하면 `https://아이디.github.io/저장소명/` 에서 열립니다.
 4. 애드센스 승인 후 `index.html` 상단의 주석 처리된 AdSense 스크립트를 실제 코드로 바꿉니다. (승인 전에는 광고 스크립트를 넣지 않습니다.)
 
 ## 계산 방식 요약
