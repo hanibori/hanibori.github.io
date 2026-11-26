@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hanibori.github.io/unsedosa/sitemap.xml
+Sitemap: https://hanibori.github.io/sitemap.xml
