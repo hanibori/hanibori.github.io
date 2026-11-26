@@ -34,6 +34,8 @@
     }
     return false;
   }
+  /* 월지 → 그 달을 여는 절입(節) */
+  var JEOL_OF_MONTH = { 2: '입춘', 3: '경칩', 4: '청명', 5: '입하', 6: '망종', 7: '소서', 8: '입추', 9: '백로', 10: '한로', 11: '입동', 0: '대설', 1: '소한' };
   /* 받침에 맞춰 조사를 붙인다: pair('과','와'), josa('이','가'), ro('으로','로'), ra('이라','라') */
   function pair(word, withJong, withoutJong) {
     return String(word || '') + (hasJong(word) ? withJong : withoutJong);
@@ -261,7 +263,7 @@
       '</div>' +
       '<div class="quote">' + esc(g.personality.split('.')[0]) + '.</div>' +
       '<p style="color:var(--muted);font-size:14px;margin:0">' + esc(j.life) + '</p>' +
-      '<p style="color:var(--muted-2);font-size:12.5px;margin:12px 0 0">' + esc(lunarTxt) + ' · 절기 ' + esc(chart.solarTerm.name) + ' 무렵 출생 · ' + chart.strength + ' (세력 ' + Math.round(chart.supportRatio * 100) + '%)</p>' +
+      '<p style="color:var(--muted-2);font-size:12.5px;margin:12px 0 0">' + esc(lunarTxt) + ' · ' + esc(JEOL_OF_MONTH[chart.pillars.month.ji]) + ' 이후 ' + esc(chart.pillars.month.jiName) + '월 출생 · ' + chart.strength + ' (세력 ' + Math.round(chart.supportRatio * 100) + '%)</p>' +
       '</div>';
 
     /* 오행 */
