@@ -21,7 +21,7 @@
       alt: '우아한 선녀 도사'
     },
     chic: {
-      name: '역술가', role: '2027 신년운세',
+      name: '시크 역술가', role: '2027 정미년',
       face: 'assets/char-chic-face.webp', body: 'assets/char-chic.webp',
       alt: '시크한 역술가'
     }
@@ -45,6 +45,10 @@
     return false;
   }
   function iga(word) { return String(word || '') + (hasJong(word) ? '이' : '가'); }
+  function eul(word) { return String(word || '') + (hasJong(word) ? '을' : '를'); }
+  function wa(word) { return String(word || '') + (hasJong(word) ? '과' : '와'); }
+  function neun(word) { return String(word || '') + (hasJong(word) ? '은' : '는'); }
+  function ira(word) { return String(word || '') + (hasJong(word) ? '이라네' : '라네'); }
 
   /* **강조** 표시를 말풍선 마크업으로 */
   function bubbleHTML(line) {
@@ -82,6 +86,49 @@
     }
     if (cur && out.length < 2) out.push(cur);
     return out;
+  }
+  /* 한 문장이 말풍선보다 길면 문장 → 쉼표 → 띄어쓰기 순서로 끊는다 */
+  function chunk(text, max) {
+    var out = [];
+    sentences(text).forEach(function (s) {
+      var t = s;
+      while (t.length > max) {
+        var cut = -1, lo = Math.floor(max * 0.55), i;
+        for (i = max; i >= lo; i--) {
+          var c = t.charAt(i);
+          if (c === ',' || c === '·' || c === '.' || c === '!' || c === '?') { cut = i + 1; break; }
+        }
+        if (cut < 0) for (i = max; i >= lo; i--) {
+          if (t.charAt(i) === ' ') { cut = i; break; }
+        }
+        if (cut < 0) cut = max;
+        out.push(t.slice(0, cut).trim());
+        t = t.slice(cut).trim();
+      }
+      if (t) out.push(t);
+    });
+    return out;
+  }
+  /* 여러 문장을 말풍선 두 개에 담는다. 넘치는 꼬리는 버린다(전문은 리포트에 있다) */
+  function pack(parts, max) {
+    var src = [], out = [], cur = '';
+    (parts || []).forEach(function (p) {
+      chunk(p, max).forEach(function (c) { if (c) src.push(c); });
+    });
+    for (var i = 0; i < src.length && out.length < 2; i++) {
+      var t = src[i];
+      var cand = cur ? cur + ' ' + t : t;
+      if (cand.length <= max) { cur = cand; continue; }
+      if (cur) { out.push(cur); cur = ''; }
+      if (out.length >= 2) break;
+      cur = t;
+    }
+    if (cur && out.length < 2) out.push(cur);
+    return out.length ? out : [''];
+  }
+  /* 두 마디 말풍선 + 골드 강조 */
+  function bub(parts, marks) {
+    return pack(parts, 46).map(function (t) { return mark(t, marks); });
   }
   /* 마침표 기준으로 문장 나누기 (구형 사파리에서도 도는 단순 구현) */
   function sentences(text) {
@@ -257,6 +304,298 @@
     });
 
     return { cast: 'doryeong', beats: ordered };
+  }
+
+  /* ---------- 대화 대본 만들기 : 궁합 ---------- */
+  var SAENG = { '목': '화', '화': '토', '토': '금', '금': '수', '수': '목' };
+  var GEUK = { '목': '토', '화': '금', '토': '수', '금': '목', '수': '화' };
+
+  function ganRel(a, b) {
+    var ea = a.dayMaster.elem, eb = b.dayMaster.elem;
+    if (Math.abs(a.dayMaster.gan - b.dayMaster.gan) === 5) return 'hap';
+    if (ea === eb) return 'same';
+    if (SAENG[ea] === eb) return 'saeng_ab';
+    if (SAENG[eb] === ea) return 'saeng_ba';
+    if (GEUK[ea] === eb) return 'geuk_ab';
+    return 'geuk_ba';
+  }
+
+  var COMPAT_ASK = {
+    score: '궁합 점수가 궁금해',
+    spark: '어디서 끌렸는지',
+    heart: '속마음이 궁금해',
+    balance: '채워주는 기운은?',
+    life: '같이 살면 어떨까',
+    clash: '갈등 피하는 법은?',
+    keep: '오래 가는 비결은?',
+    year2027: '2027 둘의 흐름은?'
+  };
+
+  function compatBeats(a, b, r) {
+    var F = global.Fortune;
+    if (!F || !r || !a || !b) return null;
+    var ga = F.GAN[a.dayMaster.gan], gb = F.GAN[b.dayMaster.gan];
+    var Ji = F.JI;
+    var ja = a.pillars.day.ji, jb = b.pillars.day.ji;
+    var nmA = a.input.name || '첫 번째 분';
+    var nmB = b.input.name || '두 번째 분';
+    var ilA = a.dayMaster.ilju, ilB = b.dayMaster.ilju;
+    var yA = a.years[1], yB = b.years[1];
+    var secs = r.byKey || {};
+    function dosa(k, i) { var s = secs[k] && secs[k].dosa; return s && s[i] ? s[i] : ''; }
+    function chips(k) { return ((secs[k] && secs[k].chips) || []).slice(0, 4); }
+    var gs = r.gauges || [];
+    var rel = ganRel(a, b);
+    var reads = Math.max(1, Math.round((r.totalChars || 0) / 480));
+    var relLine = {
+      hap: '설명하기 어려운 끌림이 먼저 오지. 처음인데도 오래 안 사람처럼 말이 이어지네.',
+      same: '거울을 보는 셈일세. 편한 만큼 같은 곳에서 같이 넘어지지.',
+      saeng_ab: nmA + '의 기운이 ' + eul(nmB) + ' 살리는 자리라, 먼저 다가가는 쪽이 정해져 있네.',
+      saeng_ba: nmB + '의 기운이 ' + eul(nmA) + ' 살리는 자리라, ' + nmB + ' 쪽이 먼저 마음을 여네.',
+      geuk_ab: nmA + '의 기운이 ' + eul(nmB) + ' 누르는 자리라, 그 다름이 끌림이 되려면 시간이 걸리네.',
+      geuk_ba: nmB + '의 기운이 ' + eul(nmA) + ' 누르는 자리라, 처음엔 답답하게 느껴질 수 있네.'
+    }[rel];
+
+    var beats = [
+      {
+        id: 'hello', shot: 'mid', face: 'l', mood: 'rose',
+        ask: null,
+        chips: [ilA + ' · ' + ilB, a.dayMaster.animal + '띠 · ' + b.dayMaster.animal + '띠', '두 사람의 인연'],
+        lines: bub([
+          '어서 오게, ' + wa(nmA) + ' ' + nmB + '. 여덟 글자를 나란히 놓아봤네.',
+          '오늘은 인연의 자리부터 풀어주지. 궁금한 데부터 물어도 좋네.'
+        ], [nmA, nmB, '인연의 자리'])
+      },
+      {
+        id: 'score', shot: 'close', face: 'r', mood: 'gold',
+        ask: COMPAT_ASK.score,
+        chips: [r.score + '점', r.grade, '끌림 ' + (gs[0] ? gs[0].value : '-'), '안정 ' + (gs[3] ? gs[3].value : '-')],
+        lines: bub([
+          r.score + '점, ' + r.grade + '일세. 두 사람의 자리는 ' + ira(r.relName) + '.',
+          '끌림 ' + (gs[0] ? gs[0].value : 0) + ', 대화 ' + (gs[1] ? gs[1].value : 0) +
+            ', 안정 ' + (gs[3] ? gs[3].value : 0) + '. 숫자보다 어디가 어긋나는지가 중요하네.'
+        ], [r.score + '점', r.grade, r.relName])
+      },
+      {
+        id: 'spark', shot: 'mid', face: 'l', mood: 'dawn',
+        ask: COMPAT_ASK.spark,
+        chips: [ga.short + ' × ' + gb.short, '음양 ' + (a.dayMaster.yang === b.dayMaster.yang ? '같음' : '다름')].concat(chips('spark').slice(1, 3)),
+        lines: bub([
+          ga.short === gb.short
+            ? '첫인상은 같은 ' + ga.short + ' 기운끼리라, 닮은 점이 먼저 보이네.'
+            : '첫인상은 ' + ga.short + ' 기운과 ' + gb.short + ' 기운의 만남에서 갈리네.',
+          relLine
+        ], [ga.short, gb.short, '끌림'])
+      },
+      {
+        id: 'heart', shot: 'close', face: 'r', mood: 'violet',
+        ask: COMPAT_ASK.heart,
+        chips: chips('heart'),
+        lines: bub([
+          '겉과 속마음의 간격은 ' + Ji[ja].name + ' × ' + Ji[jb].name + ' 자리에서 갈리네.',
+          ja === jb
+            ? '두 사람 다 같은 자리라, 서운함도 같은 곳에서 생기네. 그때 바로 말하게.'
+            : '표현의 온도가 달라서, 서운함이 쌓이기 전에 말로 확인하는 게 약일세.'
+        ], ['속마음', Ji[ja].name, Ji[jb].name])
+      },
+      {
+        id: 'balance', shot: 'sky', face: 'l', mood: 'jade',
+        ask: COMPAT_ASK.balance,
+        chips: chips('balance'),
+        lines: bub([
+          '두 사람 모두 ' + (a.minElem === b.minElem ? a.minElem : a.minElem + '·' + b.minElem) + ' 기운이 가장 얇네.',
+          dosa('balance', 2)
+        ], [(a.minElem === b.minElem ? a.minElem : a.minElem + '·' + b.minElem) + ' 기운'])
+      },
+      {
+        id: 'life', shot: 'mid', face: 'r', mood: 'sand',
+        ask: COMPAT_ASK.life,
+        chips: chips('life'),
+        lines: bub([
+          '연애의 온도와 살림은 다르지.',
+          dosa('life', 2)
+        ], ['살림'])
+      },
+      {
+        id: 'clash', shot: 'close', face: 'l', mood: 'crimson',
+        ask: COMPAT_ASK.clash,
+        chips: chips('clash'),
+        lines: bub([
+          '싸우는 건 사건이 아니라 말의 순서일세.',
+          dosa('clash', 2)
+        ], ['말의 순서'])
+      },
+      {
+        id: 'keep', shot: 'mid', face: 'r', mood: 'blue',
+        ask: COMPAT_ASK.keep,
+        chips: chips('remedy'),
+        lines: bub([
+          '오래 가는 비결은 큰 사랑보다 작은 규칙일세.',
+          dosa('remedy', 2)
+        ], ['작은 규칙'])
+      },
+      {
+        id: 'year2027', shot: 'sky', face: 'l', mood: 'night',
+        ask: COMPAT_ASK.year2027,
+        chips: ['2027 ' + yA.ganzi, nmA + ' ' + yA.ganSipsin, nmB + ' ' + yB.ganSipsin],
+        lines: bub([
+          '2027년 정미(丁未), ' + neun(nmA) + ' ' + yA.ganSipsin + ', ' + neun(nmB) + ' ' + yB.ganSipsin + ' 운일세.',
+          dosa('year', 2)
+        ], ['정미(丁未)', yA.ganSipsin, yB.ganSipsin])
+      },
+      {
+        id: 'closing', shot: 'mid', face: 'r', mood: 'rose',
+        chips: ['심층 리포트 ' + (r.totalChars || 0).toLocaleString('ko-KR') + '자', '읽는 시간 약 ' + reads + '분', '네 가지 지표'],
+        lines: bub([
+          '여기까지가 두 사람의 큰 그림일세.',
+          '더 깊은 풀이는 아래 전체 리포트에 담아뒀네. 점수보다 두 사람이 그리는 날이 더 중요하지.'
+        ], ['전체 리포트']),
+        actions: [
+          { label: '전체 리포트 펼쳐 볼래', run: 'report' },
+          { label: '궁합 공유할래', run: 'share' },
+          { label: '처음부터 다시 볼래', run: 'again' }
+        ]
+      }
+    ];
+
+    return { cast: 'seonnyeo', beats: beats };
+  }
+
+  /* ---------- 대화 대본 만들기 : 2027 신년운세 ---------- */
+  var NEWYEAR_ASK = {
+    seun: '2027 총운부터 들을래',
+    first: '상반기 흐름은?',
+    second: '하반기 흐름은?',
+    money: '2027 재물운은?',
+    love: '연애운은 어때?',
+    health: '건강은 조심할 때?',
+    calendar: '가장 조심할 달은?',
+    remedy: '개운 팁 알려줘'
+  };
+
+  function monthsLine(list, suffix) {
+    if (!list || !list.length) return '';
+    var nums = list.map(function (m) { return m.m !== undefined ? m.m : m; });
+    return nums.join('·') + (suffix || '월');
+  }
+
+  function newyearBeats(chart, r) {
+    var F = global.Fortune;
+    if (!F || !r || !chart) return null;
+    var nm = chart.input.name || '자네';
+    var y27 = chart.years[1];
+    var secs = r.byKey || {};
+    function dosa(k, i) { var s = secs[k] && secs[k].dosa; return s && s[i] ? s[i] : ''; }
+    function chips(k) { return ((secs[k] && secs[k].chips) || []).slice(0, 4); }
+    var good = r.goodMonths || [], money = r.moneyMonths || [], spend = r.spendMonths || [];
+    var love = r.loveMonths || [], clash = r.clashMonths || [];
+    var goodFirst = good.filter(function (m) { return m.m >= 2 && m.m <= 6; });
+    var clashSecond = clash.filter(function (m) { return m.m >= 7; });
+    var reads = Math.max(1, Math.round((r.totalChars || 0) / 480));
+
+    var beats = [
+      {
+        id: 'hello', shot: 'mid', face: 'l', mood: 'night',
+        ask: null,
+        chips: ['2027 정미', y27.ganSipsin + ' 운', y27.jiSipsin + ' 운', '흐름 ' + r.index + '점'],
+        lines: bub([
+          (chart.input.name ? '어서 오게, ' + chart.input.name + '.' : '어서 오게.'),
+          '여덟 글자에 2027 정미(丁未)년을 얹어봤네. ' + chart.dayMaster.ilju + ' 일주, ' + chart.strength + '인 사주지.'
+        ], [chart.input.name || '', '2027 정미(丁未)', chart.dayMaster.ilju, chart.strength])
+      },
+      {
+        id: 'seun', shot: 'close', face: 'r', mood: 'gold',
+        ask: NEWYEAR_ASK.seun,
+        chips: chips('seun'),
+        lines: bub([
+          dosa('seun', 0),
+          dosa('seun', 1)
+        ], ['정미년', y27.ganSipsin, '흐름'])
+      },
+      {
+        id: 'first', shot: 'mid', face: 'l', mood: 'jade',
+        ask: NEWYEAR_ASK.first,
+        chips: ['1~3월 준비', '4~6월 실행'].concat(goodFirst.length ? [monthsLine(goodFirst) + ' 힘'] : []),
+        lines: bub([
+          '상반기는 1~3월은 준비, 4~6월은 실행일세. 입춘(2월 4일)을 지나며 판이 바뀌지.',
+          goodFirst.length ? monthsLine(goodFirst) + '에 힘이 실리니 미뤄둔 일을 그때 꺼내게.'
+            : '상반기에 유난히 힘이 실리는 달은 적네. 하던 일을 놓지 않는 게 이기는 길일세.'
+        ], ['입춘(2월 4일)'].concat(goodFirst.length ? [monthsLine(goodFirst)] : []))
+      },
+      {
+        id: 'second', shot: 'mid', face: 'r', mood: 'indigo',
+        ask: NEWYEAR_ASK.second,
+        chips: ['7~9월 결과', '10~12월 정리'].concat(clashSecond.length ? [monthsLine(clashSecond) + ' 주의'] : []),
+        lines: bub([
+          '하반기는 상반기에 벌인 일의 결과가 드러나는 때일세.',
+          clashSecond.length ? monthsLine(clashSecond) + '은 충이 걸리니 큰 결정을 피하고, 입동(11월 7일)부터 정리하게.'
+            : '입추(8월 7일)에 결과를 확인하고, 입동(11월 7일)부터 정리와 결산일세.'
+        ], ['입추(8월 7일)', '입동(11월 7일)'].concat(clashSecond.length ? [monthsLine(clashSecond)] : []))
+      },
+      {
+        id: 'money', shot: 'close', face: 'l', mood: 'sand',
+        ask: NEWYEAR_ASK.money,
+        chips: chips('money'),
+        lines: bub([
+          (money.length ? '돈은 ' + monthsLine(money) + '에 물길이 트이네. ' : '올해는 돈이 크게 트이는 달이 적네. ') +
+            (spend.length ? monthsLine(spend) + '은 지갑을 조심하게.' : '새는 곳을 막는 게 먼저일세.'),
+          dosa('money', 2)
+        ], [money.length ? monthsLine(money) : '물길', spend.length ? monthsLine(spend) : '지갑'])
+      },
+      {
+        id: 'love', shot: 'mid', face: 'r', mood: 'rose',
+        ask: NEWYEAR_ASK.love,
+        chips: chips('love'),
+        lines: bub([
+          love.length ? monthsLine(love) + '에 인연의 문이 열리네.' : '인연의 문은 크게 열리지 않는 해일세.',
+          dosa('love', 1) + ' ' + dosa('love', 2)
+        ], love.length ? [monthsLine(love)] : ['인연'])
+      },
+      {
+        id: 'health', shot: 'close', face: 'l', mood: 'crimson',
+        ask: NEWYEAR_ASK.health,
+        chips: chips('health'),
+        lines: bub([
+          '2027년은 건강이 운의 바탕이 되는 해일세.',
+          dosa('health', 0).replace('2027년은 ', '')
+        ], ['건강'])
+      },
+      {
+        id: 'calendar', shot: 'sky', face: 'r', mood: 'blue',
+        ask: NEWYEAR_ASK.calendar,
+        chips: [(good.length ? '힘 실리는 달 ' + monthsLine(good, '') : '힘 실리는 달 적음'),
+          (clash.length ? '주의 ' + monthsLine(clash, '') : '주의 달 적음'),
+          (money.length ? '돈 ' + monthsLine(money, '') : '돈 달 적음')],
+        lines: bub([
+          (good.length ? monthsLine(good) + '에 힘이 실리고, ' : '') + (clash.length ? monthsLine(clash) + '은 큰 결정을 피할 달일세.' : '큰 충돌 없이 지나가는 해일세.'),
+          dosa('calendar', 1)
+        ], good.length ? [monthsLine(good)] : [])
+      },
+      {
+        id: 'remedy', shot: 'mid', face: 'l', mood: 'jade',
+        ask: NEWYEAR_ASK.remedy,
+        chips: ['용신 ' + chart.yongsin.elem, '개운 ' + chart.yongsin.elem + ' 기운', '잠 7시간'],
+        lines: bub([
+          '개운은 거창할 것 없네. 색과 방향 하나면 되지.',
+          dosa('health', 1)
+        ], ['금 기운', chart.yongsin.elem + ' 기운'])
+      },
+      {
+        id: 'closing', shot: 'mid', face: 'r', mood: 'dawn',
+        chips: ['심층 리포트 ' + (r.totalChars || 0).toLocaleString('ko-KR') + '자', '읽는 시간 약 ' + reads + '분', '12개월 캘린더'],
+        lines: bub([
+          '여기까지가 2027년의 큰 흐름일세.',
+          '달마다 할 일과 개운법은 아래 전체 리포트에 자세히 담아뒀네.'
+        ], ['전체 리포트']),
+        actions: [
+          { label: '전체 리포트 펼쳐 볼래', run: 'report' },
+          { label: '2027 운세 공유할래', run: 'share' },
+          { label: '처음부터 다시 볼래', run: 'again' }
+        ]
+      }
+    ];
+
+    return { cast: 'chic', beats: beats };
   }
 
   /* ---------- 웹툰 컷 렌더 · 진행 ---------- */
@@ -488,6 +827,8 @@
   global.Story = {
     cast: CASTS,
     mount: mount,
-    indexBeats: indexBeats
+    indexBeats: indexBeats,
+    compatBeats: compatBeats,
+    newyearBeats: newyearBeats
   };
 })(window);

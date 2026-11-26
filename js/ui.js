@@ -1022,8 +1022,25 @@
       return deepSectionHTML(s, i, sections.length, sections[i + 1] ? sections[i + 1].title : '');
     }).join('') + '</div>';
   }
-  function bindDeep(host) {
-    qsa('.deep-sec .deep-head', host).forEach(function (head) {
+  /* 전체 리포트 한눈에 보기 토글 (궁합·2027 결과 화면) */
+  function setupReportToggle() {
+    var btn = qs('#vn-report-toggle'), box = qs('#vn-report');
+    if (!btn || !box) return function () { };
+    function set(open) {
+      box.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      var label = btn.querySelector('span');
+      if (label) label.textContent = open ? '전체 리포트 접기' : '전체 리포트 한눈에 보기';
+      if (open) {
+        var top = box.getBoundingClientRect().top + global.pageYOffset - 74;
+        global.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      }
+    }
+    btn.addEventListener('click', function () { set(box.hidden); });
+    return set;
+  }
+
+  function bindDeep(host) {    qsa('.deep-sec .deep-head', host).forEach(function (head) {
       head.addEventListener('click', function () {
         var sec = head.parentNode;
         var open = sec.classList.toggle('open');
@@ -1148,7 +1165,8 @@
       var host = qs('#compat-result');
 
       var html = '';
-      html += talkBoxHTML(r.talk, '도사님의 궁합 풀이', 'seonnyeo');
+      var story = global.Story && global.Story.compatBeats ? global.Story.compatBeats(ca, cb, r) : null;
+      if (story) html += '<div id="compat-stage"></div>';
       html += '<div class="card compat-score">' +
         '<div class="cs-num">' + r.score + '<span>점</span></div>' +
         '<div class="cs-grade">' + esc(r.grade) + '</div>' +
@@ -1161,6 +1179,10 @@
         '<span class="chip">일지 ' + ca.pillars.day.jiName + '·' + cb.pillars.day.jiName + '</span>' +
         '<span class="chip">음양 ' + (ca.dayMaster.yang !== cb.dayMaster.yang ? '다름' : '같음') + '</span>' +
         '</div></div>';
+
+      html += '<button type="button" class="vn-report-toggle" id="vn-report-toggle" aria-expanded="false" aria-controls="vn-report">' +
+        '<span>전체 리포트 한눈에 보기</span><span class="ar" aria-hidden="true">▾</span></button>' +
+        '<div class="vn-report" id="vn-report" hidden>';
 
       html += '<div class="card block"><h3><span class="dot"></span>네 가지 지표</h3>' + gaugeGridHTML(r.gauges) +
         '<p class="mini-note">끌림·대화·속궁합·안정도는 일간·일지 관계와 오행 분포로 계산한 참고 지표입니다.</p></div>';
@@ -1175,6 +1197,7 @@
 
       html += reportHeadHTML('심층 궁합 리포트 7장', r.totalChars, '일간·일지·오행·십신·세운을 겹쳐 읽은 풀이입니다.', r.sections, 'DEEP COMPAT REPORT');
       html += deepListHTML(r.sections);
+      html += '</div>'; /* #vn-report 닫기 */
 
       html += '<div class="actions">' +
         '<button class="btn btn-primary" id="compat-share">궁합 공유하기</button>' +
@@ -1184,8 +1207,24 @@
 
       host.innerHTML = html;
       host.classList.add('show');
-      bindTalk(r.talk);
       bindDeep(host);
+      var setReport = setupReportToggle();
+
+      if (story && global.Story) {
+        global.Story.mount({
+          host: qs('#compat-stage'),
+          cast: story.cast,
+          beats: story.beats,
+          onAction: function (run) {
+            if (run === 'report') setReport(true);
+            else if (run === 'share') { var sb = qs('#compat-share'); if (sb) sb.click(); }
+            else if (run === 'again') {
+              var f = qs('#compat-form');
+              if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        });
+      }
 
       var sum = '💞 ' + nmA + ' · ' + nmB + ' 궁합 ' + r.score + '점 (' + r.grade + ')\n' +
         r.relName + ' · 끌림 ' + r.gauges[0].value + ' / 대화 ' + r.gauges[1].value + ' / 안정 ' + r.gauges[3].value;
@@ -1299,7 +1338,8 @@
       var y27 = c.years[1];
 
       var html = '';
-      html += talkBoxHTML(r.talk, '도사님의 2027 한마디', 'chic');
+      var story = global.Story && global.Story.newyearBeats ? global.Story.newyearBeats(c, r) : null;
+      if (story) html += '<div id="newyear-stage"></div>';
       html += '<div class="card compat-score">' +
         '<div class="cs-num">' + r.index + '<span>점</span></div>' +
         '<div class="cs-grade">2027 흐름 지수 · ' + esc(y27.ganzi) + '년</div>' +
@@ -1313,6 +1353,10 @@
         '<span class="chip">' + (c.daeun.current ? '대운 ' + c.daeun.current.ganzi : '대운 전') + '</span>' +
         '</div></div>';
 
+      html += '<button type="button" class="vn-report-toggle" id="vn-report-toggle" aria-expanded="false" aria-controls="vn-report">' +
+        '<span>전체 리포트 한눈에 보기</span><span class="ar" aria-hidden="true">▾</span></button>' +
+        '<div class="vn-report" id="vn-report" hidden>';
+
       html += '<div class="card block"><h3><span class="dot"></span>2027년 열두 달</h3>' +
         '<p class="mini-note">월건(月建)을 절기 기준으로 계산했습니다. 색이 밝은 달이 힘이 실리는 달입니다.</p>' +
         monthStripHTML(r) +
@@ -1324,6 +1368,7 @@
 
       html += reportHeadHTML('심층 신년 리포트 6장', r.totalChars, '세운·분기·월별·재물·관계·건강을 내 사주에 겹쳐 읽은 풀이입니다.', r.sections, 'DEEP 2027 REPORT');
       html += deepListHTML(r.sections);
+      html += '</div>'; /* #vn-report 닫기 */
 
       html += '<div class="actions">' +
         '<button class="btn btn-primary" id="ny-share">2027 운세 공유</button>' +
@@ -1334,8 +1379,24 @@
 
       host.innerHTML = html;
       host.classList.add('show');
-      bindTalk(r.talk);
       bindDeep(host);
+      var setReport = setupReportToggle();
+
+      if (story && global.Story) {
+        global.Story.mount({
+          host: qs('#newyear-stage'),
+          cast: story.cast,
+          beats: story.beats,
+          onAction: function (run) {
+            if (run === 'report') setReport(true);
+            else if (run === 'share') { var sb = qs('#ny-share'); if (sb) sb.click(); }
+            else if (run === 'again') {
+              var f = qs('#newyear-form');
+              if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+        });
+      }
 
       var sum = '🔮 ' + nm + '의 2027 정미년: 흐름 지수 ' + r.index + '점 · ' + y27.ganSipsin + ' 운' +
         (r.moneyMonths.length ? ' · 돈 ' + r.moneyMonths.map(function (m) { return m.m; }).join('·') + '월' : '');
