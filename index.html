@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>무료 사주풀이 | 생년월일로 보는 사주팔자·오행·2027 신년운세 — 운세도사</title>
+<meta name="description" content="생년월일과 태어난 시간만 넣으면 사주팔자(년주·월주·일주·시주)와 오행 비율, 일간 성격, 재물운·직업운, 2027 정미년 신년운세를 도사님이 말풍선으로 풀어드립니다. 회원가입·결제 없이 무료.">
+<meta name="keywords" content="무료 사주풀이, 사주팔자, 사주 보는 법, 오행, 2027 신년운세, 정미년, 일주, 만세력">
+<meta name="author" content="운세도사">
+<meta property="og:type" content="website">
+<meta property="og:title" content="무료 사주풀이 — 운세도사">
+<meta property="og:description" content="생년월일 하나로 사주팔자·오행·2027 신년운세까지. 도사님이 직접 풀어주는 무료 사주풀이.">
+<meta property="og:image" content="https://hanibori.github.io/unsedosa/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0d17">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<!-- 애드센스 승인 후 아래 주석을 실제 스크립트로 교체하세요.
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "운세도사 — 무료 사주풀이",
+  "applicationCategory": "LifestyleApplication",
+  "operatingSystem": "All",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" },
+  "description": "생년월일과 태어난 시간으로 사주팔자, 오행 비율, 일간 성격, 재물운·직업운, 2027 신년운세를 계산해 알려주는 무료 사주풀이 웹앱."
+}
+</script>
+</head>
+<body data-page="index">
+<div class="page">
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html"><span class="brand-mark">☯</span>운세도사</a>
+      <nav class="nav">
+        <a href="index.html">사주풀이</a>
+        <a href="compatibility.html">궁합</a>
+        <a href="newyear-2027.html">2027 신년운세</a>
+        <a href="guide.html">오행·일주 가이드</a>
+        <a href="about.html">소개</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="eyebrow">무료 · 회원가입 없음 · 3초 풀이</span>
+          <h1>내 사주, <span class="gold">도사님</span>이<br>직접 풀어드립니다</h1>
+          <p class="lead">생년월일과 태어난 시간만 알려주게. 여덟 글자(사주팔자)를 세어 오행의 균형, 타고난 성격, 재물운과 직업운, 그리고 2027 정미년의 흐름까지 하나하나 짚어주겠네.</p>
+          <div class="hero-cta">
+            <a class="btn btn-primary" href="#saju-form">내 사주 풀기</a>
+            <a class="btn btn-ghost" href="compatibility.html">궁합 보기</a>
+          </div>
+        </div>
+
+        <div class="stage">
+          <div class="mascot-wrap">
+            <div class="bubble hero-bubble">
+              <div class="who"><i></i>도사님</div>
+              <div id="hero-bubble-text">어서 오게. 생년월일만 알려주면 내가 여덟 글자를 풀어주지.</div>
+            </div>
+            <img class="mascot" src="mascot.webp" alt="한복을 입고 부채를 든 3D 도사 캐릭터" width="250" height="419">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="form-section">
+      <div class="wrap">
+        <div class="card form-card">
+          <form id="saju-form" autocomplete="off">
+            <div class="form-row">
+              <span class="label">달력</span>
+              <div class="seg" id="cal-seg">
+                <button type="button" data-cal="solar" class="on">양력</button>
+                <button type="button" data-cal="lunar">음력</button>
+              </div>
+              <label class="check" id="leap-wrap" hidden style="margin-left:12px">
+                <input type="checkbox" id="leap"> 윤달
+              </label>
+              <div class="hint" id="cal-hint">주민등록상 생일을 그대로 넣으면 됩니다.</div>
+            </div>
+
+            <div class="form-row">
+              <span class="label">이름 (선택)</span>
+              <input type="text" id="name" maxlength="12" placeholder="예: 규호">
+            </div>
+
+            <div class="form-row">
+              <span class="label">생년월일</span>
+              <div class="grid-3">
+                <select id="year" aria-label="출생 연도"></select>
+                <select id="month" aria-label="출생 월"></select>
+                <select id="day" aria-label="출생 일"></select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <span class="label">태어난 시간</span>
+              <div class="grid-2">
+                <select id="hour" aria-label="출생 시"></select>
+                <select id="minute" aria-label="출생 분"></select>
+              </div>
+              <label class="check" style="margin-top:11px">
+                <input type="checkbox" id="no-time"> 시간을 몰라요 (시주 제외하고 풀이)
+              </label>
+            </div>
+
+            <div class="form-row">
+              <span class="label">성별</span>
+              <div class="seg" id="gender-seg">
+                <button type="button" data-g="m" class="on">남성</button>
+                <button type="button" data-g="f">여성</button>
+              </div>
+              <div class="hint">성별은 대운의 방향과 해석에 쓰입니다.</div>
+            </div>
+
+            <button class="btn btn-primary btn-block" type="submit">사주 풀기 ✦</button>
+            <p class="hint" style="text-align:center;margin-top:12px">입력한 정보는 서버로 전송되지 않고 브라우저에서만 계산됩니다.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="result">
+      <div class="wrap">
+        <div id="result-body"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">HOW TO READ</div>
+          <h2>사주, 이렇게 읽습니다</h2>
+          <p>같은 생일이라도 태어난 시각과 절기에 따라 여덟 글자가 달라집니다. 운세도사는 만세력의 기본 규칙을 그대로 따라 계산합니다.</p>
+        </div>
+        <div class="pair">
+          <div class="card">
+            <h3 style="font-family:var(--serif);color:var(--cream);font-size:17px;margin:0 0 8px">① 사주팔자(四柱八字)</h3>
+            <p style="color:var(--muted);font-size:14.5px;margin:0">태어난 해·달·날·시각을 각각 두 글자로 적은 것이 사주입니다. 위 글자를 천간(天干), 아래 글자를 지지(地支)라 하고, 여덟 글자가 서로 어떤 관계를 맺는지로 사람의 기질을 읽습니다.</p>
+          </div>
+          <div class="card">
+            <h3 style="font-family:var(--serif);color:var(--cream);font-size:17px;margin:0 0 8px">② 절기와 입춘</h3>
+            <p style="color:var(--muted);font-size:14.5px;margin:0">사주의 한 해는 1월 1일이 아니라 입춘(立春)에서 시작하고, 달은 24절기로 나뉩니다. 그래서 2월 초에 태어났다면 생일이 하루 이틀 차이로 년주가 달라질 수 있습니다. 이 계산은 태양의 황경을 직접 계산해 절기 시각을 잡습니다.</p>
+          </div>
+        </div>
+        <div class="pair" style="margin-top:14px">
+          <div class="card">
+            <h3 style="font-family:var(--serif);color:var(--cream);font-size:17px;margin:0 0 8px">③ 오행의 균형</h3>
+            <p style="color:var(--muted);font-size:14.5px;margin:0">목·화·토·금·수 다섯 기운이 여덟 글자에 얼마씩 들어 있는지 봅니다. 넘치는 기운은 나눠 쓰고, 모자란 기운은 생활 속 색·방향·음식·활동으로 채우라는 것이 명리학의 오랜 조언입니다.</p>
+          </div>
+          <div class="card">
+            <h3 style="font-family:var(--serif);color:var(--cream);font-size:17px;margin:0 0 8px">④ 십신과 세운</h3>
+            <p style="color:var(--muted);font-size:14.5px;margin:0">내 일간과 다른 글자의 관계를 비견·식신·정재·정관처럼 열 가지 이름으로 나눈 것이 십신입니다. 여기에 그해의 기운(세운)이 들어오면 어떤 일이 힘을 받는지 알 수 있어요. 2027년은 정미(丁未)년입니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">FAQ</div>
+          <h2>자주 묻는 질문</h2>
+        </div>
+        <div class="card">
+          <div class="faq-item">
+            <h4>태어난 시간을 모르면 어떻게 하나요?</h4>
+            <p>‘시간을 몰라요’를 체크하면 시주를 빼고 여섯 글자로 풀이합니다. 시주는 말년운과 자녀운에 주로 쓰이기 때문에, 성격·재물·직업운은 시간 없이도 충분히 볼 수 있습니다.</p>
+          </div>
+          <div class="faq-item">
+            <h4>음력 생일인데 그대로 넣어도 되나요?</h4>
+            <p>달력에서 ‘음력’을 고르고 생일을 넣으면 됩니다. 윤달(閏月)이 있는 해에 태어났다면 윤달 여부도 함께 체크해 주세요. 1900~2035년 음력을 지원합니다.</p>
+          </div>
+          <div class="faq-item">
+            <h4>사주가 나쁘면 정말 안 좋은 건가요?</h4>
+            <p>사주는 정해진 운명이 아니라 타고난 재료입니다. 같은 재료도 어떻게 쓰느냐에 따라 결과가 달라지고, 무엇을 강점으로 삼을지 아는 것이 사주를 보는 이유입니다.</p>
+          </div>
+          <div class="faq-item">
+            <h4>일주는 언제 바뀌나요?</h4>
+            <p>이 사이트는 자정(00:00)에 일주가 바뀌는 것으로 계산합니다. 밤 11시 이후를 다음 날로 보는 조자시설도 있어 학파에 따라 하루 차이가 날 수 있습니다.</p>
+          </div>
+          <div class="faq-item">
+            <h4>결과를 저장하거나 공유할 수 있나요?</h4>
+            <p>결과 화면 아래 ‘결과 카드 저장’을 누르면 사주 카드가 이미지로 저장되고, ‘카톡·SNS로 공유’로 링크와 요약을 바로 보낼 수 있습니다.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="footer-links">
+        <a href="index.html">사주풀이</a>
+        <a href="compatibility.html">궁합</a>
+        <a href="newyear-2027.html">2027 신년운세</a>
+        <a href="guide.html">오행·일주 가이드</a>
+        <a href="about.html">소개</a>
+        <a href="privacy.html">개인정보처리방침</a>
+      </div>
+      <p style="margin:0 0 6px">운세도사 — 생년월일로 보는 무료 사주풀이. 모든 풀이는 명리학의 기본 규칙을 따른 참고용 정보이며, 의료·법률·투자 판단의 근거가 될 수 없습니다.</p>
+      <p style="margin:0">© 2026 운세도사. 입력한 생년월일은 서버로 전송되지 않습니다.</p>
+    </div>
+  </footer>
+</div>
+
+<script src="js/lunar-data.js"></script>
+<script src="js/saju.js"></script>
+<script src="js/fortune.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
