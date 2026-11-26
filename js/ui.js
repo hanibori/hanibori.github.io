@@ -207,7 +207,7 @@
 
     var html = '';
     html += '<div class="result-top">' +
-      '<h2>' + esc(name) + '님의 사주팔자</h2>' +
+      '<h2>' + (chart.input.name ? esc(name) + '님의 사주팔자' : '나의 사주팔자') + '</h2>' +
       '<div class="meta">' + esc(calTxt) + ' · ' + timeTxt + ' · ' + (chart.input.gender === 'f' ? '여성' : '남성') + '</div>' +
       '</div>';
 
