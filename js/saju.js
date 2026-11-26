@@ -12,6 +12,15 @@
   var JI = '자축인묘진사오미신유술해'.split('');
   var JI_HANJA = '子丑寅卯辰巳午未申酉戌亥'.split('');
   var ANIMALS = ['쥐', '소', '호랑이', '토끼', '용', '뱀', '말', '양', '원숭이', '닭', '개', '돼지'];
+  /* 이름 끝 글자 받침 판정 (조사 붙일 때) */
+  function hasJongName(word) {
+    var t = String(word || '');
+    for (var i = t.length - 1; i >= 0; i--) {
+      var c = t.charCodeAt(i);
+      if (c >= 0xAC00 && c <= 0xD7A3) return (c - 0xAC00) % 28 !== 0;
+    }
+    return false;
+  }
 
   var GAN_ELEM = ['목', '목', '화', '화', '토', '토', '금', '금', '수', '수'];
   var GAN_YANG = [true, false, true, false, true, false, true, false, true, false];
@@ -528,7 +537,7 @@
     /* 오행 보완 */
     var lackA = a.minElem, lackB = b.minElem;
     if (b.elements[lackA] >= 2) { score += 6; notes.push({ type: 'good', text: (a.input.name || '첫 번째 분') + '에게 부족한 ' + lackA + ' 기운을 상대가 채워줄 수 있어요.' }); }
-    if (a.elements[lackB] >= 2) { score += 6; notes.push({ type: 'good', text: '상대가 부족한 ' + lackB + ' 기운을 ' + (a.input.name || '첫 번째 분') + '이 채워줄 수 있어요.' }); }
+    if (a.elements[lackB] >= 2) { score += 6; notes.push({ type: 'good', text: (a.input.name ? a.input.name + (hasJongName(a.input.name) ? '이' : '가') : '첫 번째 분이') + ' 상대에게 부족한 ' + lackB + ' 기운을 채워줄 수 있어요.' }); }
 
     /* 음양 */
     if (a.dayMaster.yang !== b.dayMaster.yang) { score += 3; notes.push({ type: 'good', text: '일간의 음양이 서로 달라 리드와 배려의 역할이 자연스럽게 나뉩니다.' }); }

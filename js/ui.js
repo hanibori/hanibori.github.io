@@ -25,6 +25,20 @@
     return String(s === undefined || s === null ? '' : s)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
+  /* 마지막 한글 글자에 받침이 있는지 (끝이 한자가 아니면 한글 음까지 거슬러 올라간다) */
+  function hasJong(word) {
+    var t = String(word || ''), c = 0;
+    for (var i = t.length - 1; i >= 0; i--) {
+      c = t.charCodeAt(i);
+      if (c >= 0xAC00 && c <= 0xD7A3) return (c - 0xAC00) % 28 !== 0;
+    }
+    return false;
+  }
+  /* 받침에 맞춰 조사를 붙인다: pair('과','와'), josa('이','가'), ro('으로','로'), ra('이라','라') */
+  function pair(word, withJong, withoutJong) {
+    return String(word || '') + (hasJong(word) ? withJong : withoutJong);
+  }
+  function josa(word, withJong, withoutJong) { return pair(word, withJong, withoutJong); }
 
   var toastTimer = null;
   function toast(msg) {
@@ -715,10 +729,11 @@
         '<a class="btn btn-ghost" href="index.html">내 사주 보기</a></div>' +
         '<p class="note">궁합 점수는 일간·일지의 생극 관계와 오행 보완도를 바탕으로 계산한 참고용 지표입니다. 점수보다 두 사람이 어떤 부분에서 맞고 어긋나는지가 더 중요합니다.</p>';
 
-      typeText(qs('#compat-talk'), nmA + '과 ' + nmB + ', 두 사람의 여덟 글자를 마주 보게 했네. ' +
-        '일간은 ' + F.GAN[ca.dayMaster.gan].short + '과 ' + F.GAN[cb.dayMaster.gan].short + ', 일지는 ' +
-        F.JI[ca.pillars.day.ji].name + '과 ' + F.JI[cb.pillars.day.ji].name + '일세. ' +
-        '점수는 ' + r.score + '점, ' + r.grade + '이라 할 수 있겠구만. 허허.', 24);
+      var shA = F.GAN[ca.dayMaster.gan].short, shB = F.GAN[cb.dayMaster.gan].short;
+      typeText(qs('#compat-talk'), josa(nmA, '과', '와') + ' ' + nmB + ', 두 사람의 여덟 글자를 마주 보게 했네. ' +
+        (shA === shB ? '일간은 둘 다 ' + shA + ', 일지는 ' : '일간은 ' + josa(shA, '과', '와') + ' ' + shB + ', 일지는 ') +
+        josa(F.JI[ca.pillars.day.ji].name, '과', '와') + ' ' + F.JI[cb.pillars.day.ji].name + '일세. ' +
+        '점수는 ' + r.score + '점, ' + josa(r.grade, '이라', '라') + ' 할 수 있겠구만. 허허.', 24);
 
       host.classList.add('show');
       host.scrollIntoView({ behavior: 'smooth', block: 'start' });
