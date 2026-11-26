@@ -33,10 +33,13 @@
 
   <main class="app-main">
 
-    <section class="page-head">
-      <span class="eyebrow">2027 · 정미년(丁未) · 붉은 양의 해</span>
-      <h1>2027년, 내게<br>무슨 <span class="gold">기운</span>이 오나</h1>
-      <p>2026년 병오(丙午)의 뜨거운 말의 해가 지나고, 2027년은 정미(丁未)년이 들어옵니다. 작은 촛불 같은 정화와 여름 끝의 습한 흙 미토 — 이 두 기운이 내 일간과 만나면 어떤 일이 힘을 받을까요.</p>
+    <section class="page-head with-char">
+      <div class="ph-copy">
+        <span class="eyebrow">2027 · 정미년(丁未) · 붉은 양의 해</span>
+        <h1>2027년, 내게<br>무슨 <span class="gold">기운</span>이 오나</h1>
+        <p>2026년 병오(丙午)의 뜨거운 말의 해가 지나고, 2027년은 정미(丁未)년이 들어옵니다. 작은 촛불 같은 정화와 여름 끝의 습한 흙 미토 — 이 두 기운이 내 일간과 만나면 어떤 일이 힘을 받을까요.</p>
+      </div>
+      <div class="ph-char"><span class="char-frame"><img class="char-img" src="assets/char-chic.webp" alt="2027년 운세를 풀어주는 역술가 캐릭터" width="300" height="380" decoding="async"></span></div>
     </section>
 
     <section class="page-sec">
@@ -47,8 +50,36 @@
           <h2 class="tb-name">붉은 양의 해, 내 일간에 따라</h2>
         </div>
       </div>
-      <a class="btn btn-primary btn-block" href="index.html#theme-newyear-main">내 사주로 2027년 보기</a>
     </section>
+
+    <section class="page-sec">
+      <form id="newyear-form" autocomplete="off" class="card">
+        <p class="quick-note" id="newyear-fill" hidden></p>
+        <div class="grid-2">
+          <input type="text" id="n-name" maxlength="12" placeholder="이름 (선택)">
+          <select id="n-gender" aria-label="성별">
+            <option value="m">남성</option>
+            <option value="f">여성</option>
+          </select>
+        </div>
+        <div class="grid-3" style="margin-top:8px">
+          <select id="n-year" aria-label="출생 연도"></select>
+          <select id="n-month" aria-label="출생 월"></select>
+          <select id="n-day" aria-label="출생 일"></select>
+        </div>
+        <div class="grid-2" style="margin-top:8px">
+          <select id="n-hour" aria-label="출생 시"></select>
+          <select id="n-minute" aria-label="출생 분"></select>
+        </div>
+        <label class="check check-sm" style="margin-top:8px">
+          <input type="checkbox" id="n-notime"> 시간을 몰라요
+        </label>
+        <button class="btn btn-primary btn-block" type="submit" style="margin-top:12px">2027년 내 운세 풀기 ✦</button>
+        <p class="quick-note">저장된 내 사주가 있으면 자동으로 채워 바로 풀립니다. 입력값은 브라우저에만 남습니다.</p>
+      </form>
+    </section>
+
+    <section id="newyear-result" class="page-sec" aria-live="polite"></section>
 
     <section class="page-sec">
       <div class="card prose">
@@ -68,7 +99,7 @@
     <section class="page-sec">
       <div class="sec-head">
         <span class="sec-kicker">BY DAY MASTER</span>
-        <h2>일간별 2027 정미년 운세</h2>
+        <h2>일간별 2027 정미년 운세 (일반론)</h2>
         <p>내 사주에서 태어난 날의 위 글자(일간)를 찾아 읽어보세요. 정미년의 정화는 일간에 따라 열 가지 이름(십신)으로 달리 작용합니다.</p>
       </div>
       <div class="card prose">
@@ -157,6 +188,7 @@
 <script src="js/lunar-data.js"></script>
 <script src="js/saju.js"></script>
 <script src="js/fortune.js"></script>
+<script src="js/year2027.js"></script>
 <script src="js/themes.js"></script>
 <script src="js/ui.js"></script>
 </body>

@@ -222,7 +222,7 @@
 
   function dosaInline(text, label) {
     return '<div class="dosa-inline">' +
-      '<img src="mascot.webp" alt="" width="46" height="77" loading="lazy" decoding="async">' +
+      '<span class="dosa-avatar"><img src="' + charFace(currentChar) + '" alt="" width="120" height="120" loading="lazy" decoding="async"></span>' +
       '<div class="dosa-inline-body"><span class="dosa-inline-label">' + esc(label) + '</span>' +
       '<p>' + esc(text) + '</p></div></div>';
   }
@@ -251,6 +251,7 @@
   }
 
   function renderResult(chart, themeKey) {
+    currentChar = charOfTheme(themeKey);
     lastChart = chart;
     lastLines = F.mascotLines(chart);
     var deep = F.deep(chart);
@@ -314,7 +315,7 @@
       ['job', '직업운'], ['love', '애정운'], ['daeun', '대운'], ['remedy', '개운법'], ['year2027', '2027']
     ];
     html += '<div class="card dosa-talk" style="margin-top:16px">' +
-      '<div class="stage"><img class="mascot" src="mascot.webp" alt="사주를 풀어주는 도사 캐릭터" width="132" height="221"></div>' +
+      '<div class="stage"><span class="char-frame char-frame-sm"><img class="char-img" src="' + charFace(currentChar) + '" alt="' + esc((CHARS[currentChar] || CHARS.doryeong).label) + '" width="120" height="120"></span></div>' +
       '<div><div class="bubble"><div class="who"><i></i>도사님의 한마디</div>' +
       '<div id="talk-text" style="min-height:76px"></div></div>' +
       '<div class="talk-tabs" id="talk-tabs">' +
@@ -501,7 +502,7 @@
       '<span class="fcard-quote">“' + esc(t.quote) + '”</span>' +
       '<span class="fcard-cta">무료로 보기 →</span>' +
       '</span>' +
-      '<img class="fcard-mascot" src="mascot.webp" alt="" width="120" height="201" loading="lazy" decoding="async">' +
+      '<img class="fcard-char" src="' + charFile(charOfCat(t.cat)) + '" alt="" width="240" height="300" loading="lazy" decoding="async">' +
       '</button>';
   }
 
@@ -511,7 +512,7 @@
       '<span class="tcard-glyph" aria-hidden="true">' + t.glyph + '</span>' +
       (t.badge ? '<span class="tcard-badge">' + badgeHTML(t) + '</span>' : '') +
       '<span class="tcard-hook">' + t.hook + '</span>' +
-      '<img class="tcard-mascot" src="mascot.webp" alt="" width="80" height="134" loading="lazy" decoding="async">' +
+      '<img class="tcard-char" src="' + charFile(charOfCat(t.cat)) + '" alt="" width="160" height="200" loading="lazy" decoding="async">' +
       '</span>' +
       '<span class="tcard-body"><span class="tcard-name">' + esc(t.name) + '</span>' +
       '<span class="tcard-cta">무료로 보기 →</span>' +
@@ -663,6 +664,7 @@
 
   function saveCard(chart) {
     var W = 1080, H = 1350;
+    var bomW = 232, bomH = 296, bomX = W - 92 - bomW, bomY = 40;
     var cv = doc.createElement('canvas');
     cv.width = W; cv.height = H;
     var ctx = cv.getContext('2d');
@@ -672,7 +674,7 @@
     var mascotReady = new Promise(function (res) {
       mi.onload = function () { res(true); };
       mi.onerror = function () { res(false); };
-      mi.src = 'mascot.webp';
+      mi.src = charFile(currentChar);
     });
     /* file:// 로 열면 이미지를 캔버스에 그릴 때 보안 오류가 나므로 미리 확인한다 */
     function canDraw(img) {
@@ -709,7 +711,22 @@
       ctx.stroke();
 
       if (hasMascot) {
-        ctx.drawImage(mi, 832, 44, 158, 268);
+        var cw = bomW, chh = bomH;
+        var oc = doc.createElement('canvas');
+        oc.width = cw; oc.height = chh;
+        var octx = oc.getContext('2d');
+        var sw = mi.width, sh = mi.height;
+        var scale = Math.max(cw / sw, chh / sh);
+        var dw = sw * scale, dh = sh * scale;
+        octx.drawImage(mi, (cw - dw) / 2, (chh - dh) * 0.12, dw, dh);
+        var fade = octx.createLinearGradient(0, chh * 0.5, 0, chh);
+        fade.addColorStop(0, 'rgba(0,0,0,0)');
+        fade.addColorStop(1, 'rgba(0,0,0,1)');
+        octx.globalCompositeOperation = 'destination-out';
+        octx.fillStyle = fade;
+        octx.fillRect(0, 0, cw, chh);
+        octx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(oc, bomX, bomY);
       }
 
       ctx.fillStyle = '#d8b268';
@@ -914,76 +931,285 @@
     }
   }
 
+  /* ---------- 캐릭터 ---------- */
+  var CHARS = {
+    doryeong: { file: 'assets/char-doryeong.webp', face: 'assets/char-doryeong-face.webp', label: '꽃미남 도령' },
+    seonnyeo: { file: 'assets/char-seonnyeo.webp', face: 'assets/char-seonnyeo-face.webp', label: '우아한 선녀' },
+    chic: { file: 'assets/char-chic.webp', face: 'assets/char-chic-face.webp', label: '시크한 역술가' }
+  };
+  function charOfCat(cat) {
+    return cat === 'love' ? 'seonnyeo' : cat === 'jeontong' ? 'doryeong' : 'chic';
+  }
+  function charOfTheme(key) {
+    var t = T && T.map ? T.map[key] : null;
+    return t ? charOfCat(t.cat) : 'doryeong';
+  }
+  function charFace(key) { return (CHARS[key] || CHARS.doryeong).face; }
+  function charFile(key) { return (CHARS[key] || CHARS.doryeong).file; }
+  var currentChar = 'doryeong';
+
+  /* ---------- 공용 : 심층 리포트 조각 ---------- */
+  function talkBoxHTML(talk, label, charKey) {
+    return '<div class="card dosa-talk">' +
+      '<div class="stage"><span class="char-frame char-frame-sm">' +
+      '<img class="char-img" src="' + charFace(charKey) + '" alt="' + esc((CHARS[charKey] || CHARS.doryeong).label) + '" width="120" height="120" loading="lazy" decoding="async">' +
+      '</span></div>' +
+      '<div><div class="bubble"><div class="who"><i></i>' + esc(label) + '</div>' +
+      '<div id="talk-text" style="min-height:74px"></div></div>' +
+      '<div class="talk-tabs" id="talk-tabs">' +
+      talk.map(function (t, i) {
+        return '<button type="button" data-k="' + t.key + '"' + (i === 0 ? ' class="on"' : '') + '>' + esc(t.label) + '</button>';
+      }).join('') +
+      '</div>' +
+      '<p class="talk-hint">항목을 누르면 그 자리의 핵심을 짚어줍니다. 자세한 풀이는 아래 심층 리포트에 이어집니다.</p>' +
+      '</div></div>';
+  }
+  function bindTalk(talk) {
+    var box = qs('#talk-text');
+    if (!box) return;
+    function show(key) {
+      for (var i = 0; i < talk.length; i++) if (talk[i].key === key) { typeText(box, talk[i].text, 16); return; }
+    }
+    qsa('#talk-tabs button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        qsa('#talk-tabs button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        show(b.getAttribute('data-k'));
+      });
+    });
+    show(talk[0].key);
+  }
+  function gaugeGridHTML(gs) {
+    return '<div class="gauge-grid">' + gs.map(function (g) {
+      return '<div class="gauge">' +
+        '<div class="g-top"><span>' + esc(g.label) + '</span><b>' + g.value + '</b></div>' +
+        '<div class="elem-track"><div class="elem-fill" style="width:' + g.value + '%;background:linear-gradient(90deg,#4f7fb8,#d8b268,' + (g.value >= 80 ? '#d9604f' : '#d8b268') + ')"></div></div>' +
+        '<div class="g-note">' + esc(g.note) + '</div></div>';
+    }).join('') + '</div>';
+  }
+  function reportHeadHTML(title, totalChars, sub, sections) {
+    var readMin = Math.max(1, Math.round(totalChars / 480));
+    return '<div class="report-head">' +
+      '<div class="report-kicker">DEEP COMPAT REPORT</div>' +
+      '<h3>' + esc(title) + '</h3>' +
+      '<p>' + esc(sub) + ' 약 ' + totalChars.toLocaleString('ko-KR') + '자, 읽는 시간 약 ' + readMin + '분.</p>' +
+      '<div class="report-tools"><button type="button" class="btn btn-ghost btn-sm" id="deep-toggle-all">전체 펼치기</button></div>' +
+      '</div>' +
+      '<nav class="report-toc" aria-label="심층 리포트 목차">' +
+      sections.map(function (s) {
+        return '<a href="#sec-' + s.key + '" data-jump="' + s.key + '">' + s.no + ' ' + esc(s.title) + '</a>';
+      }).join('') + '</nav>';
+  }
+  function deepListHTML(sections) {
+    return '<div class="deep-list">' + sections.map(function (s, i) {
+      return deepSectionHTML(s, i, sections.length, sections[i + 1] ? sections[i + 1].title : '');
+    }).join('') + '</div>';
+  }
+  function bindDeep(host) {
+    qsa('.deep-sec .deep-head', host).forEach(function (head) {
+      head.addEventListener('click', function () {
+        var sec = head.parentNode;
+        var open = sec.classList.toggle('open');
+        head.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    });
+    qsa('.deep-next', host).forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = +btn.getAttribute('data-next');
+        var sec = qsa('.deep-sec', host)[idx];
+        if (!sec) return;
+        sec.classList.add('open');
+        var h = qs('.deep-head', sec);
+        if (h) h.setAttribute('aria-expanded', 'true');
+        var top = sec.getBoundingClientRect().top + global.pageYOffset - 74;
+        global.scrollTo({ top: top, behavior: 'smooth' });
+      });
+    });
+    qsa('.report-toc a', host).forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var sec = qs('#sec-' + a.getAttribute('data-jump'), host);
+        if (!sec) return;
+        sec.classList.add('open');
+        var h = qs('.deep-head', sec);
+        if (h) h.setAttribute('aria-expanded', 'true');
+        var top = sec.getBoundingClientRect().top + global.pageYOffset - 74;
+        global.scrollTo({ top: top, behavior: 'smooth' });
+      });
+    });
+    var toggleAll = qs('#deep-toggle-all', host);
+    if (toggleAll) {
+      toggleAll.addEventListener('click', function () {
+        var allOpen = qsa('.deep-sec', host).every(function (s) { return s.classList.contains('open'); });
+        qsa('.deep-sec', host).forEach(function (s) {
+          s.classList.toggle('open', !allOpen);
+          var h = qs('.deep-head', s);
+          if (h) h.setAttribute('aria-expanded', allOpen ? 'false' : 'true');
+        });
+        toggleAll.textContent = allOpen ? '전체 펼치기' : '전체 접기';
+      });
+    }
+  }
+
+  /* ---------- 공용 : 생년월일 입력 세트 ---------- */
+  function buildDateSet(prefix) {
+    var o = {
+      y: qs('#' + prefix + '-year'), m: qs('#' + prefix + '-month'), d: qs('#' + prefix + '-day'),
+      h: qs('#' + prefix + '-hour'), mi: qs('#' + prefix + '-minute'), none: qs('#' + prefix + '-notime')
+    };
+    fillDateSelects(o.y, o.m, o.d, 2026);
+    fillTimeSelects(o.h, o.mi);
+    o.y.addEventListener('change', function () { refreshDays(o.y, o.m, o.d); });
+    o.m.addEventListener('change', function () { refreshDays(o.y, o.m, o.d); });
+    o.none.addEventListener('change', function () {
+      o.h.disabled = o.none.checked;
+      o.mi.disabled = o.none.checked;
+    });
+    return o;
+  }
+  function fillDateSet(o, p) {
+    if (!p) return false;
+    if (!p.year || !p.month || !p.day) return false;
+    o.y.value = p.year;
+    o.m.value = p.month;
+    refreshDays(o.y, o.m, o.d, p.day);
+    if (p.hour === null || p.hour === undefined) {
+      o.none.checked = true;
+      o.h.disabled = true; o.mi.disabled = true;
+    } else {
+      o.none.checked = false;
+      o.h.disabled = false; o.mi.disabled = false;
+      o.h.value = p.hour; o.mi.value = p.minute || 0;
+    }
+    return true;
+  }
+  function readDateSet(o, genderEl, nameEl) {
+    return {
+      year: +o.y.value, month: +o.m.value, day: +o.d.value,
+      hour: o.none.checked ? null : +o.h.value,
+      minute: o.none.checked ? 0 : +o.mi.value,
+      calendar: 'solar', leap: false,
+      gender: genderEl.value,
+      name: nameEl.value
+    };
+  }
+
   /* ---------- 궁합 페이지 ---------- */
   function initCompat() {
     var form = qs('#compat-form');
     if (!form) return;
-    var a = { y: qs('#a-year'), m: qs('#a-month'), d: qs('#a-day') };
-    var b = { y: qs('#b-year'), m: qs('#b-month'), d: qs('#b-day') };
-    fillDateSelects(a.y, a.m, a.d, 2026);
-    fillDateSelects(b.y, b.m, b.d, 2026);
-    a.y.value = 1996; b.y.value = 1996;
-    refreshDays(a.y, a.m, a.d); refreshDays(b.y, b.m, b.d);
-    [a, b].forEach(function (o) {
-      o.y.addEventListener('change', function () { refreshDays(o.y, o.m, o.d); });
-      o.m.addEventListener('change', function () { refreshDays(o.y, o.m, o.d); });
-    });
+    currentChar = 'seonnyeo';
+    var A = buildDateSet('a');
+    var B = buildDateSet('b');
+
+    /* 저장된 내 사주로 첫 번째 칸 채우기 */
+    var saved = readProfile();
+    var filled = false;
+    if (saved) {
+      filled = fillDateSet(A, saved);
+      if (saved.name) qs('#a-name').value = saved.name;
+      if (saved.gender) qs('#a-gender').value = saved.gender === 'f' ? 'f' : 'm';
+      if (filled) {
+        qs('#b-gender').value = saved.gender === 'f' ? 'm' : 'f';
+        var note = qs('#compat-fill');
+        if (note) {
+          note.hidden = false;
+          note.textContent = '저장된 내 사주(' + (saved.name || '이름 없음') + ')를 첫 번째 칸에 채웠어요. 두 번째 사람 생일만 넣으면 됩니다.';
+        }
+      }
+    }
+
+    function run() {
+      var pa = readDateSet(A, qs('#a-gender'), qs('#a-name'));
+      var pb = readDateSet(B, qs('#b-gender'), qs('#b-name'));
+      var ca = S.build(pa), cb = S.build(pb);
+      if (ca.error) { toast('첫 번째 생일: ' + ca.error); return; }
+      if (cb.error) { toast('두 번째 생일: ' + cb.error); return; }
+      var r = global.Compat.report(ca, cb);
+      var nmA = ca.input.name || '첫 번째 분';
+      var nmB = cb.input.name || '두 번째 분';
+      var host = qs('#compat-result');
+
+      var html = '';
+      html += talkBoxHTML(r.talk, '도사님의 궁합 풀이', 'seonnyeo');
+      html += '<div class="card compat-score">' +
+        '<div class="cs-num">' + r.score + '<span>점</span></div>' +
+        '<div class="cs-grade">' + esc(r.grade) + '</div>' +
+        '<div class="cs-track"><div class="elem-fill" style="width:' + r.score + '%;background:linear-gradient(90deg,#4f7fb8,#d8b268,#d9604f)"></div></div>' +
+        '<p class="cs-pair">' + esc(nmA) + ' · ' + ca.dayMaster.ilju + ' (' + ca.dayMaster.iljuHanja + ')<br>' +
+        esc(nmB) + ' · ' + cb.dayMaster.ilju + ' (' + cb.dayMaster.iljuHanja + ')</p>' +
+        '<div class="chips">' +
+        '<span class="chip">' + esc(r.relName) + '</span>' +
+        '<span class="chip">일간 ' + ca.dayMaster.name + '·' + cb.dayMaster.name + '</span>' +
+        '<span class="chip">일지 ' + ca.pillars.day.jiName + '·' + cb.pillars.day.jiName + '</span>' +
+        '<span class="chip">음양 ' + (ca.dayMaster.yang !== cb.dayMaster.yang ? '다름' : '같음') + '</span>' +
+        '</div></div>';
+
+      html += '<div class="card block"><h3><span class="dot"></span>네 가지 지표</h3>' + gaugeGridHTML(r.gauges) +
+        '<p class="mini-note">끌림·대화·속궁합·안정도는 일간·일지 관계와 오행 분포로 계산한 참고 지표입니다.</p></div>';
+
+      html += '<div class="card block"><h3><span class="dot"></span>두 사람의 연결고리</h3>' +
+        '<div class="note-list">' + r.notes.map(function (n) {
+          return '<p class="note-item ' + n.type + '"><span>●</span> ' + esc(n.text) + '</p>';
+        }).join('') + '</div></div>';
+
+      html += '<div class="pair block">' +
+        personCardHTML(ca, nmA) + personCardHTML(cb, nmB) + '</div>';
+
+      html += reportHeadHTML('심층 궁합 리포트 7장', r.totalChars, '일간·일지·오행·십신·세운을 겹쳐 읽은 풀이입니다.', r.sections);
+      html += deepListHTML(r.sections);
+
+      html += '<div class="actions">' +
+        '<button class="btn btn-primary" id="compat-share">궁합 공유하기</button>' +
+        '<button class="btn btn-ghost" id="compat-copy">링크 복사</button>' +
+        '<a class="btn btn-ghost" href="index.html">내 사주 보기</a></div>';
+      html += '<p class="note">궁합 점수는 일간·일지의 합충과 오행 보완도로 계산한 참고 지표입니다. 점수보다 두 사람이 어디서 맞고 어디서 어긋나는지가 더 중요합니다. 입력한 생년월일은 서버로 전송되지 않습니다.</p>';
+
+      host.innerHTML = html;
+      host.classList.add('show');
+      bindTalk(r.talk);
+      bindDeep(host);
+
+      var sum = '💞 ' + nmA + ' · ' + nmB + ' 궁합 ' + r.score + '점 (' + r.grade + ')\n' +
+        r.relName + ' · 끌림 ' + r.gauges[0].value + ' / 대화 ' + r.gauges[1].value + ' / 안정 ' + r.gauges[3].value;
+      var sh = qs('#compat-share');
+      if (sh) sh.addEventListener('click', function () {
+        if (navigator.share) {
+          navigator.share({ title: '운세도사 궁합', text: sum, url: location.href }).catch(function () { });
+        } else copyText(sum + '\n' + location.href, '궁합 결과를 복사했어요');
+      });
+      var cp = qs('#compat-copy');
+      if (cp) cp.addEventListener('click', function () { copyText(sum + '\n' + location.href, '궁합 결과를 복사했어요'); });
+
+      setTimeout(function () {
+        var top = host.getBoundingClientRect().top + global.pageYOffset - 64;
+        global.scrollTo({ top: top, behavior: 'smooth' });
+      }, 80);
+    }
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var ca = S.build({ year: a.y.value, month: a.m.value, day: a.d.value, hour: null, gender: qs('#a-gender').value, name: qs('#a-name').value });
-      var cb = S.build({ year: b.y.value, month: b.m.value, day: b.d.value, hour: null, gender: qs('#b-gender').value, name: qs('#b-name').value });
-      if (ca.error) { toast('첫 번째 생일: ' + ca.error); return; }
-      if (cb.error) { toast('두 번째 생일: ' + cb.error); return; }
-      var r = S.compatibility(ca, cb);
-      var host = qs('#compat-result');
-      var nmA = ca.input.name || '첫 번째 분';
-      var nmB = cb.input.name || '두 번째 분';
-      var lines = F.mascotLines(ca);
-      host.innerHTML =
-        '<div class="card dosa-talk">' +
-        '<div class="stage"><img class="mascot" src="mascot.webp" alt="궁합을 풀어주는 도사 캐릭터" width="132" height="221"></div>' +
-        '<div><div class="bubble"><div class="who"><i></i>도사님의 궁합 풀이</div>' +
-        '<div id="compat-talk" style="min-height:70px"></div></div></div></div>' +
-        '<div class="card block" style="text-align:center">' +
-        '<div style="font-family:var(--serif);font-size:56px;color:var(--gold-2);line-height:1.1">' + r.score + '<span style="font-size:22px;color:var(--muted)">점</span></div>' +
-        '<div style="color:var(--gold);font-size:15px;letter-spacing:.1em">' + r.grade + '</div>' +
-        '<div class="elem-track" style="margin:18px 0 6px"><div class="elem-fill" style="width:' + r.score + '%;background:linear-gradient(90deg,#4f7fb8,#d8b268,#d9604f)"></div></div>' +
-        '<p style="color:var(--muted);font-size:13.5px;margin:10px 0 0">' + esc(nmA) + ' · ' + ca.dayMaster.ilju + ' (' + ca.dayMaster.iljuHanja + ') / ' +
-        esc(nmB) + ' · ' + cb.dayMaster.ilju + ' (' + cb.dayMaster.iljuHanja + ')</p>' +
-        '</div>' +
-        '<div class="card block"><h3><span class="dot"></span>두 사람의 연결고리</h3>' +
-        r.notes.map(function (n) {
-          return '<p style="margin:10px 0;font-size:14.5px">' +
-            '<span style="color:' + (n.type === 'good' ? '#8fd0a5' : n.type === 'warn' ? '#e0a097' : 'var(--muted)') + '">●</span> ' + esc(n.text) + '</p>';
-        }).join('') +
-        '</div>' +
-        '<div class="pair block">' +
-        '<div class="card"><h3><span class="dot"></span>' + esc(nmA) + '</h3>' +
-        '<div class="chips"><span class="chip">' + ca.dayMaster.ilju + '</span><span class="chip">' + ca.dayMaster.animal + '띠</span><span class="chip">' + ca.maxElem + ' 강 · ' + ca.minElem + ' 약</span></div>' +
-        '<p style="font-size:14px;color:var(--muted);margin:10px 0 0">' + esc(F.GAN[ca.dayMaster.gan].personality.split('.')[0]) + '.</p></div>' +
-        '<div class="card"><h3><span class="dot"></span>' + esc(nmB) + '</h3>' +
-        '<div class="chips"><span class="chip">' + cb.dayMaster.ilju + '</span><span class="chip">' + cb.dayMaster.animal + '띠</span><span class="chip">' + cb.maxElem + ' 강 · ' + cb.minElem + ' 약</span></div>' +
-        '<p style="font-size:14px;color:var(--muted);margin:10px 0 0">' + esc(F.GAN[cb.dayMaster.gan].personality.split('.')[0]) + '.</p></div>' +
-        '</div>' +
-        '<div class="actions"><button class="btn btn-ghost" id="compat-share">궁합 공유하기</button>' +
-        '<a class="btn btn-ghost" href="index.html">내 사주 보기</a></div>' +
-        '<p class="note">궁합 점수는 일간·일지의 생극 관계와 오행 보완도를 바탕으로 계산한 참고용 지표입니다. 점수보다 두 사람이 어떤 부분에서 맞고 어긋나는지가 더 중요합니다.</p>';
-
-      var shA = F.GAN[ca.dayMaster.gan].short, shB = F.GAN[cb.dayMaster.gan].short;
-      typeText(qs('#compat-talk'), josa(nmA, '과', '와') + ' ' + nmB + ', 두 사람의 여덟 글자를 마주 보게 했네. ' +
-        (shA === shB ? '일간은 둘 다 ' + shA + ', 일지는 ' : '일간은 ' + josa(shA, '과', '와') + ' ' + shB + ', 일지는 ') +
-        josa(F.JI[ca.pillars.day.ji].name, '과', '와') + ' ' + F.JI[cb.pillars.day.ji].name + '일세. ' +
-        '점수는 ' + r.score + '점, ' + josa(r.grade, '이라', '라') + ' 할 수 있겠구만. 허허.', 24);
-
-      host.classList.add('show');
-      host.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      var sh = qs('#compat-share');
-      if (sh) sh.addEventListener('click', function () {
-        copyText('💞 ' + nmA + ' · ' + nmB + ' 궁합 ' + r.score + '점 (' + r.grade + ')\n' + location.href, '궁합 결과를 복사했어요');
-      });
+      run();
     });
+
+    /* 저장된 사주가 있으면 첫 번째 칸을 채우고, 두 번째 칸도 채워져 있으면 바로 풀지 않고 기다린다 */
+    if (filled && qs('#b-name') && qs('#b-name').value) setTimeout(run, 200);
   }
+
+  function personCardHTML(c, nm) {
+    var y27 = c.years[1];
+    return '<div class="card"><h3><span class="dot"></span>' + esc(nm) + '</h3>' +
+      '<div class="chips"><span class="chip">' + c.dayMaster.ilju + '</span>' +
+      '<span class="chip">' + c.dayMaster.animal + '띠</span>' +
+      '<span class="chip">' + c.strength + '</span>' +
+      '<span class="chip">' + c.maxElem + ' 강 · ' + c.minElem + ' 약</span>' +
+      '<span class="chip">용신 ' + c.yongsin.elem + '</span>' +
+      '<span class="chip">2027 ' + y27.ganSipsin + '</span></div>' +
+      '<p class="mini-note">' + esc(c.dayMaster.iljuHanja) + ' 일주 · ' + esc(c.pillars.month.hangul) + '월 · ' +
+      (c.input.hour === null ? '시간 모름' : String(c.input.hour).padStart(2, '0') + ':' + String(c.input.minute).padStart(2, '0')) + '</p>' +
+      '</div>';
+  }
+
 
   /* ---------- 가이드 페이지 ---------- */
   function initGuide() {
@@ -1007,16 +1233,103 @@
     }
   }
 
-  /* ---------- 2027 페이지 ---------- */
+  /* ---------- 2027 신년운세 페이지 ---------- */
+  function monthStripHTML(report) {
+    return '<div class="month-grid">' + report.months.map(function (m) {
+      return '<div class="month-tile" data-rel="' + m.rel + '">' +
+        '<div class="mt-top"><b>' + m.m + '월</b><span>' + m.ganzi + '</span></div>' +
+        '<div class="mt-key">' + esc(m.keyword.replace('의 달', '')) + '</div>' +
+        '<div class="mt-dot"></div></div>';
+    }).join('') + '</div>';
+  }
+
   function initNewYear() {
-    var host = qs('#year2027-grid');
-    if (!host) return;
-    var order = ['비견', '겁재', '식신', '상관', '편재', '정재', '정관', '편관', '정인', '편인'];
-    host.innerHTML = order.map(function (k) {
-      var s = F.SIPSIN[k];
-      return '<div class="card elem-card"><h3 style="font-size:14.5px"><span class="dot"></span>' + k + ' <span style="color:var(--muted);font-size:11.5px;font-weight:400">' + s.hanja + '</span></h3>' +
-        '<p>' + esc(F.YEAR2027[k]) + '</p></div>';
-    }).join('');
+    var form = qs('#newyear-form');
+    if (!form) return;
+    currentChar = 'chic';
+    var D = buildDateSet('n');
+    var saved = readProfile();
+    var filled = false;
+    if (saved) {
+      filled = fillDateSet(D, saved);
+      if (saved.name) qs('#n-name').value = saved.name;
+      if (saved.gender) qs('#n-gender').value = saved.gender === 'f' ? 'f' : 'm';
+      var note = qs('#newyear-fill');
+      if (note && filled) {
+        note.hidden = false;
+        note.textContent = '저장된 내 사주(' + (saved.name || '이름 없음') + ')로 2027년을 바로 풀었어요. 생일을 바꾸면 다시 풀립니다.';
+      }
+    }
+
+    function run() {
+      var p = readDateSet(D, qs('#n-gender'), qs('#n-name'));
+      var c = S.build(p);
+      if (c.error) { toast(c.error); return; }
+      var r = global.Year2027.report(c, S);
+      var nm = c.input.name || '내 사주';
+      var host = qs('#newyear-result');
+      var y27 = c.years[1];
+
+      var html = '';
+      html += talkBoxHTML(r.talk, '도사님의 2027 한마디', 'chic');
+      html += '<div class="card compat-score">' +
+        '<div class="cs-num">' + r.index + '<span>점</span></div>' +
+        '<div class="cs-grade">2027 흐름 지수 · ' + esc(y27.ganzi) + '년</div>' +
+        '<div class="cs-track"><div class="elem-fill" style="width:' + r.index + '%;background:linear-gradient(90deg,#4f7fb8,#d8b268,#d9604f)"></div></div>' +
+        '<p class="cs-pair">' + esc(nm) + ' · ' + c.dayMaster.ilju + ' (' + c.dayMaster.iljuHanja + ') · ' + c.strength + '</p>' +
+        '<div class="chips">' +
+        '<span class="chip">천간 ' + y27.ganSipsin + '</span>' +
+        '<span class="chip">지지 ' + y27.jiSipsin + '</span>' +
+        '<span class="chip">용신 ' + c.yongsin.elem + '</span>' +
+        '<span class="chip">기신 ' + c.yongsin.gisin + '</span>' +
+        '<span class="chip">' + (c.daeun.current ? '대운 ' + c.daeun.current.ganzi : '대운 전') + '</span>' +
+        '</div></div>';
+
+      html += '<div class="card block"><h3><span class="dot"></span>2027년 열두 달</h3>' +
+        '<p class="mini-note">월건(月建)을 절기 기준으로 계산했습니다. 색이 밝은 달이 힘이 실리는 달입니다.</p>' +
+        monthStripHTML(r) +
+        '<div class="chips">' +
+        '<span class="chip">돈 ' + (r.moneyMonths.length ? r.moneyMonths.map(function (m) { return m.m; }).join('·') + '월' : '없음') + '</span>' +
+        '<span class="chip">지출주의 ' + (r.spendMonths.length ? r.spendMonths.map(function (m) { return m.m; }).join('·') + '월' : '없음') + '</span>' +
+        '<span class="chip">인연 ' + (r.loveMonths.length ? r.loveMonths.map(function (m) { return m.m; }).join('·') + '월' : '없음') + '</span>' +
+        '</div></div>';
+
+      html += reportHeadHTML('심층 신년 리포트 6장', r.totalChars, '세운·분기·월별·재물·관계·건강을 내 사주에 겹쳐 읽은 풀이입니다.', r.sections);
+      html += deepListHTML(r.sections);
+
+      html += '<div class="actions">' +
+        '<button class="btn btn-primary" id="ny-share">2027 운세 공유</button>' +
+        '<button class="btn btn-ghost" id="ny-copy">링크 복사</button>' +
+        '<a class="btn btn-ghost" href="compatibility.html">궁합 보기</a>' +
+        '<a class="btn btn-ghost" href="index.html">내 사주 보기</a></div>';
+      html += '<p class="note">2027년 신년운세는 세운(歲運)의 기운을 내 사주에 겹쳐 해석한 참고 자료입니다. 같은 해라도 사주 구성에 따라 체감은 크게 달라집니다. 입력한 생년월일은 서버로 전송되지 않습니다.</p>';
+
+      host.innerHTML = html;
+      host.classList.add('show');
+      bindTalk(r.talk);
+      bindDeep(host);
+
+      var sum = '🔮 ' + nm + '의 2027 정미년: 흐름 지수 ' + r.index + '점 · ' + y27.ganSipsin + ' 운' +
+        (r.moneyMonths.length ? ' · 돈 ' + r.moneyMonths.map(function (m) { return m.m; }).join('·') + '월' : '');
+      var sh = qs('#ny-share');
+      if (sh) sh.addEventListener('click', function () {
+        if (navigator.share) navigator.share({ title: '운세도사 2027 신년운세', text: sum, url: location.href }).catch(function () { });
+        else copyText(sum + '\n' + location.href, '2027 운세를 복사했어요');
+      });
+      var cp = qs('#ny-copy');
+      if (cp) cp.addEventListener('click', function () { copyText(sum + '\n' + location.href, '2027 운세를 복사했어요'); });
+
+      setTimeout(function () {
+        var top = host.getBoundingClientRect().top + global.pageYOffset - 64;
+        global.scrollTo({ top: top, behavior: 'smooth' });
+      }, 80);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      run();
+    });
+    if (filled) setTimeout(run, 200);
   }
 
   /* ---------- 공통 실행 ---------- */

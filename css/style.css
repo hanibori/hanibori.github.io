@@ -736,7 +736,9 @@ select option { background: #141a2b; color: var(--cream); }
   filter: drop-shadow(0 12px 16px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
-.fcard-top { position: relative; display: flex; align-items: center; gap: 5px; }.fcard-hook {
+.fcard-top { position: relative; display: flex; align-items: center; gap: 5px; }/* 텍스트는 캐릭터 위로 */
+.fcard-art > .fcard-hook, .fcard-art > .fcard-quote, .fcard-art > .fcard-cta, .fcard-art > .fcard-top { z-index: 3; }
+.fcard-hook {
   display: block;
   position: relative;
   margin-top: 14px;
@@ -753,6 +755,7 @@ select option { background: #141a2b; color: var(--cream); }
 .fcard-quote {
   display: block;
   position: relative;
+  max-width: 176px;
   margin: auto 0 9px;
   font-size: 10.6px;
   line-height: 1.6;
@@ -846,7 +849,7 @@ select option { background: #141a2b; color: var(--cream); }
   position: absolute;
   z-index: 2;
   left: 9px;
-  right: 56px;
+  right: 66px;
   bottom: 8px;
   font-family: var(--serif);
   font-size: 13.4px;
@@ -1501,4 +1504,193 @@ select option { background: #141a2b; color: var(--cream); }
 @media (prefers-reduced-motion: reduce) {
   .mascot, .hero-stage::before, .hero-stage::after, .hero-bubble, .fcard { animation: none !important; }
   html { scroll-behavior: auto; }
+}
+
+/* ============================================================
+   테마별 캐릭터 (도령 · 선녀 · 시크 역술가)
+   ============================================================ */
+.char-frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  border-radius: 46% 46% 13px 13px;
+  background:
+    radial-gradient(120% 80% at 50% 6%, rgba(216, 178, 106, 0.20), rgba(13, 15, 24, 0.95) 72%);
+  border: 1px solid rgba(216, 178, 106, 0.26);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.55);
+}
+.char-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 0 26px 14px rgba(8, 9, 15, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.char-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, rgba(0, 0, 0, 0.35) 86%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, rgba(0, 0, 0, 0.35) 86%, transparent 100%);
+}
+.char-frame-sm {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.char-frame-sm .char-img { object-position: 50% 26%; -webkit-mask-image: none; mask-image: none; }
+
+.hero-char { width: 100%; height: 168px; border-radius: 50% 50% 16px 16px / 40% 40% 16px 16px; }
+.hero-stage .hero-char { z-index: 2; animation: floaty 6s ease-in-out infinite; }
+
+.ph-char { align-self: end; width: 96px; height: 124px; }
+.page-head.with-char {
+  display: grid;
+  grid-template-columns: 1fr 96px;
+  gap: 12px;
+  align-items: end;
+}
+.page-head.with-char .ph-copy { min-width: 0; }
+
+/* 카드 위 캐릭터: 텍스트 뒤에 깔려 글자를 가리지 않게 */
+.fcard-char {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 112px;
+  height: 150px;
+  z-index: 1;
+  object-fit: cover;
+  object-position: 50% 16%;
+  border-radius: 46% 46% 0 0;
+  pointer-events: none;
+  opacity: 0.97;
+  -webkit-mask-image: linear-gradient(to bottom, #000 52%, rgba(0, 0, 0, 0.25) 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 52%, rgba(0, 0, 0, 0.25) 88%, transparent 100%);
+  filter: saturate(0.96) drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6));
+}
+.tcard-char {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 62px;
+  height: 82px;
+  z-index: 1;
+  object-fit: cover;
+  object-position: 50% 16%;
+  border-radius: 46% 46% 0 0;
+  pointer-events: none;
+  opacity: 0.95;
+  -webkit-mask-image: linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.2) 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 50%, rgba(0, 0, 0, 0.2) 88%, transparent 100%);
+}
+
+.dosa-avatar {
+  display: block;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(216, 178, 106, 0.55);
+  align-self: start;
+  background: #0d0f18;
+}
+.dosa-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 26%;
+  border-radius: 0;
+  filter: none;
+}
+.dosa-talk .stage .char-frame-sm { margin-top: 2px; }
+
+/* ---------------- 궁합 · 신년 공용 ---------------- */
+.compat-score {
+  text-align: center;
+  padding: 20px 16px 16px;
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(216, 178, 106, 0.16), transparent 60%),
+    linear-gradient(180deg, rgba(24, 27, 39, 0.95), rgba(14, 16, 24, 0.98));
+}
+.cs-num {
+  font-family: var(--serif);
+  font-size: 58px;
+  line-height: 1;
+  color: var(--gold-2);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.cs-num span { font-size: 21px; color: var(--muted); margin-left: 2px; }
+.cs-grade { color: var(--gold); font-size: 14px; letter-spacing: 0.12em; margin-top: 7px; }
+.cs-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  margin: 16px 0 4px;
+}
+.cs-track .elem-fill { height: 100%; border-radius: 999px; box-shadow: 0 0 14px rgba(216, 178, 106, 0.5); }
+.cs-pair { color: var(--muted); font-size: 13px; line-height: 1.7; margin: 12px 0 0; }
+.compat-score .chips { justify-content: center; }
+
+.gauge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.gauge {
+  border: 1px solid var(--line-soft);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.028);
+  padding: 10px 11px 9px;
+}
+.g-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 7px; }
+.g-top span { font-size: 11.5px; color: var(--muted); letter-spacing: 0.04em; }
+.g-top b { font-family: var(--serif); font-size: 17px; color: var(--gold-2); font-variant-numeric: tabular-nums; }
+.gauge .elem-track { height: 6px; }
+.g-note { font-size: 10px; color: var(--muted-2); margin-top: 6px; }
+
+.note-list { display: grid; gap: 7px; }
+.note-item { margin: 0; font-size: 13.2px; line-height: 1.7; color: var(--text); word-break: keep-all; }
+.note-item span { margin-right: 4px; }
+.note-item.good span { color: #8fd0a5; }
+.note-item.warn span { color: #e0a097; }
+.note-item.mid span { color: var(--muted); }
+.mini-note { font-size: 11px; color: var(--muted-2); line-height: 1.65; margin: 10px 0 0; word-break: keep-all; }
+
+.month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 11px; }
+.month-tile {
+  border-radius: 11px;
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 7px 8px 8px;
+  position: relative;
+  overflow: hidden;
+}
+.month-tile[data-rel='good'] { border-color: rgba(216, 178, 106, 0.42); background: rgba(216, 178, 106, 0.09); }
+.month-tile[data-rel='bad'] { background: rgba(79, 127, 184, 0.08); }
+.mt-top { display: flex; align-items: baseline; gap: 4px; }
+.mt-top b { font-size: 13px; color: var(--cream); }
+.mt-top span { font-size: 9.5px; color: var(--muted-2); }
+.mt-key { font-size: 9.5px; color: var(--muted); line-height: 1.45; margin-top: 3px; word-break: keep-all; }
+.month-tile[data-rel='good'] .mt-key { color: var(--gold-2); }
+.mt-dot { position: absolute; right: 7px; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
+.month-tile[data-rel='good'] .mt-dot { background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.month-tile[data-rel='bad'] .mt-dot { background: #4f7fb8; }
+
+#newyear-result { display: none; }
+#newyear-result.show { display: grid; gap: 10px; animation: fadeUp 0.4s ease both; }
+#newyear-result .report-head { padding-top: 4px; }
+
+@media (max-width: 360px) {
+  .gauge-grid { grid-template-columns: 1fr; }
+  .month-grid { grid-template-columns: repeat(3, 1fr); }
+  .page-head.with-char { grid-template-columns: 1fr 78px; }
+  .ph-char { width: 78px; height: 102px; }
+}
+@media (min-width: 700px) {
+  .hero-char { height: 196px; }
 }
