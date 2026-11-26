@@ -674,7 +674,7 @@
     var mascotReady = new Promise(function (res) {
       mi.onload = function () { res(true); };
       mi.onerror = function () { res(false); };
-      mi.src = charFile(currentChar);
+      mi.src = charFace(currentChar);
     });
     /* file:// 로 열면 이미지를 캔버스에 그릴 때 보안 오류가 나므로 미리 확인한다 */
     function canDraw(img) {
@@ -711,22 +711,26 @@
       ctx.stroke();
 
       if (hasMascot) {
-        var cw = bomW, chh = bomH;
-        var oc = doc.createElement('canvas');
-        oc.width = cw; oc.height = chh;
-        var octx = oc.getContext('2d');
-        var sw = mi.width, sh = mi.height;
-        var scale = Math.max(cw / sw, chh / sh);
-        var dw = sw * scale, dh = sh * scale;
-        octx.drawImage(mi, (cw - dw) / 2, (chh - dh) * 0.12, dw, dh);
-        var fade = octx.createLinearGradient(0, chh * 0.5, 0, chh);
-        fade.addColorStop(0, 'rgba(0,0,0,0)');
-        fade.addColorStop(1, 'rgba(0,0,0,1)');
-        octx.globalCompositeOperation = 'destination-out';
-        octx.fillStyle = fade;
-        octx.fillRect(0, 0, cw, chh);
-        octx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(oc, bomX, bomY);
+        /* 얼굴 크롭을 원형 프레임으로 (카드 배경과 자연스럽게 이어지도록) */
+        var rad = 104, ccx = W - 92 - rad, ccy = 44 + rad;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, rad, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        var sw = mi.width, sh = mi.height, side = Math.min(sw, sh);
+        ctx.drawImage(mi, (sw - side) / 2, (sh - side) / 2, side, side, ccx - rad, ccy - rad, rad * 2, rad * 2);
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(216,178,106,0.6)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, rad - 1, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(216,178,106,0.18)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(ccx, ccy, rad + 8, 0, Math.PI * 2);
+        ctx.stroke();
       }
 
       ctx.fillStyle = '#d8b268';
@@ -1244,6 +1248,17 @@
   }
 
   function initNewYear() {
+    /* 정적 십신 카드 (일반론) */
+    var gridHost = qs('#year2027-grid');
+    if (gridHost) {
+      var order = ['비견', '겁재', '식신', '상관', '편재', '정재', '정관', '편관', '정인', '편인'];
+      gridHost.innerHTML = order.map(function (k) {
+        var sp = F.SIPSIN[k];
+        return '<div class="card elem-card"><h3 style="font-size:14.5px"><span class="dot"></span>' + k +
+          ' <span style="color:var(--muted);font-size:11.5px;font-weight:400">' + sp.hanja + '</span></h3>' +
+          '<p>' + esc(F.YEAR2027[k]) + '</p></div>';
+      }).join('');
+    }
     var form = qs('#newyear-form');
     if (!form) return;
     currentChar = 'chic';
