@@ -987,10 +987,10 @@
         '<div class="g-note">' + esc(g.note) + '</div></div>';
     }).join('') + '</div>';
   }
-  function reportHeadHTML(title, totalChars, sub, sections) {
+  function reportHeadHTML(title, totalChars, sub, sections, kicker) {
     var readMin = Math.max(1, Math.round(totalChars / 480));
     return '<div class="report-head">' +
-      '<div class="report-kicker">DEEP COMPAT REPORT</div>' +
+      '<div class="report-kicker">' + esc(kicker || 'DEEP REPORT') + '</div>' +
       '<h3>' + esc(title) + '</h3>' +
       '<p>' + esc(sub) + ' 약 ' + totalChars.toLocaleString('ko-KR') + '자, 읽는 시간 약 ' + readMin + '분.</p>' +
       '<div class="report-tools"><button type="button" class="btn btn-ghost btn-sm" id="deep-toggle-all">전체 펼치기</button></div>' +
@@ -1156,7 +1156,7 @@
       html += '<div class="pair block">' +
         personCardHTML(ca, nmA) + personCardHTML(cb, nmB) + '</div>';
 
-      html += reportHeadHTML('심층 궁합 리포트 7장', r.totalChars, '일간·일지·오행·십신·세운을 겹쳐 읽은 풀이입니다.', r.sections);
+      html += reportHeadHTML('심층 궁합 리포트 7장', r.totalChars, '일간·일지·오행·십신·세운을 겹쳐 읽은 풀이입니다.', r.sections, 'DEEP COMPAT REPORT');
       html += deepListHTML(r.sections);
 
       html += '<div class="actions">' +
@@ -1294,7 +1294,7 @@
         '<span class="chip">인연 ' + (r.loveMonths.length ? r.loveMonths.map(function (m) { return m.m; }).join('·') + '월' : '없음') + '</span>' +
         '</div></div>';
 
-      html += reportHeadHTML('심층 신년 리포트 6장', r.totalChars, '세운·분기·월별·재물·관계·건강을 내 사주에 겹쳐 읽은 풀이입니다.', r.sections);
+      html += reportHeadHTML('심층 신년 리포트 6장', r.totalChars, '세운·분기·월별·재물·관계·건강을 내 사주에 겹쳐 읽은 풀이입니다.', r.sections, 'DEEP 2027 REPORT');
       html += deepListHTML(r.sections);
 
       html += '<div class="actions">' +
