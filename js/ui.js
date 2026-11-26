@@ -309,20 +309,21 @@
       pillarHTML('년주', chart.pillars.year, false) +
       '</div>';
 
-    /* 도사 말풍선 */
-    var tabs = [
-      ['greeting', '첫인사'], ['summary', '총평'], ['personality', '성격'], ['money', '재물운'],
-      ['job', '직업운'], ['love', '애정운'], ['daeun', '대운'], ['remedy', '개운법'], ['year2027', '2027']
-    ];
-    html += '<div class="card dosa-talk" style="margin-top:16px">' +
-      '<div class="stage"><span class="char-frame char-frame-sm"><img class="char-img" src="' + charFace(currentChar) + '" alt="' + esc((CHARS[currentChar] || CHARS.doryeong).label) + '" width="120" height="120"></span></div>' +
-      '<div><div class="bubble"><div class="who"><i></i>도사님의 한마디</div>' +
-      '<div id="talk-text" style="min-height:76px"></div></div>' +
-      '<div class="talk-tabs" id="talk-tabs">' +
-      tabs.map(function (t, i) { return '<button type="button" data-k="' + t[0] + '"' + (i === 0 ? ' class="on"' : '') + '>' + t[1] + '</button>'; }).join('') +
-      '</div>' +
-      '<p class="talk-hint">항목을 누르면 그 자리의 핵심을 도사님이 짚어줍니다. 자세한 풀이는 아래 심층 리포트에 이어집니다.</p>' +
-      '</div></div>';
+    /* 비주얼 노벨 대화 스테이지 (도사가 무대에서 직접 말을 건다) */
+    html += '<div id="vn-root"></div>';
+
+    /* 여덟 글자 */
+    html += '<div class="pillars vn-pillars">' +
+      pillarHTML('시주', chart.pillars.hour, false) +
+      pillarHTML('일주', chart.pillars.day, true) +
+      pillarHTML('월주', chart.pillars.month, false) +
+      pillarHTML('년주', chart.pillars.year, false) +
+      '</div>';
+
+    /* 전체 리포트 한눈에 보기 (접었다 펴는 심층 리포트 전문) */
+    html += '<button type="button" class="vn-report-toggle" id="vn-report-toggle" aria-expanded="false" aria-controls="vn-report">' +
+      '<span>전체 리포트 한눈에 보기</span><span class="ar" aria-hidden="true">▾</span></button>' +
+      '<div class="vn-report" id="vn-report" hidden>';
 
     /* 한눈에 보는 요약 */
     html += '<div class="card block">' +
@@ -375,6 +376,8 @@
       }).join('') +
       '</div>';
 
+    html += '</div>'; /* #vn-report 닫기 */
+
     /* 액션 */
     html += '<div class="actions">' +
       '<button class="btn btn-primary" id="save-card">결과 카드 저장</button>' +
@@ -403,22 +406,39 @@
 
     host.innerHTML = html;
 
-    /* 말풍선 탭 */
-    var talkText = qs('#talk-text');
-    function showTalk(key) {
-      var v = lastLines[key];
-      var text = Array.isArray(v) ? v.join(' ') : (v || '');
-      typeText(talkText, text, 16);
-    }
-    qsa('#talk-tabs button').forEach(function (b) {
-      b.addEventListener('click', function () {
-        qsa('#talk-tabs button').forEach(function (x) { x.classList.remove('on'); });
-        b.classList.add('on');
-        showTalk(b.getAttribute('data-k'));
+    /* 무대에 도사를 세운다 */
+    var story = global.Story ? global.Story.indexBeats(chart, themeKey) : null;
+    var vn = null;
+    if (story && global.Story) {
+      vn = global.Story.mount({
+        host: qs('#vn-root'),
+        cast: story.cast,
+        beats: story.beats,
+        onAction: function (run) {
+          if (run === 'card') saveCard(chart);
+          else if (run === 'share') share(chart);
+          else if (run === 'theme') {
+            var sw = qs('.theme-switch');
+            if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
       });
-    });
-    if (theme && T.intro) typeText(talkText, T.intro(theme, chart), 20);
-    else showTalk('greeting');
+    }
+
+    /* 전체 리포트 토글 */
+    var repBtn = qs('#vn-report-toggle');
+    var repBox = qs('#vn-report');
+    function setReport(open) {
+      if (!repBtn || !repBox) return;
+      repBox.hidden = !open;
+      repBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      repBtn.querySelector('span').textContent = open ? '전체 리포트 접기' : '전체 리포트 한눈에 보기';
+      if (open) {
+        var top = repBox.getBoundingClientRect().top + global.pageYOffset - scrollOffset() - 8;
+        global.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      }
+    }
+    if (repBtn) repBtn.addEventListener('click', function () { setReport(repBox.hidden); });
 
     /* 아코디언 */
     function openSection(sec, scroll) {
