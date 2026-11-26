@@ -438,7 +438,7 @@
     var dayMaster = {
       gan: dayGan, name: CHEON[dayGan], hanja: CHEON_HANJA[dayGan],
       elem: GAN_ELEM[dayGan], yang: GAN_YANG[dayGan],
-      animal: ANIMALS[dayJi],
+      animal: ANIMALS[yearJi],   /* 띠는 년지(입춘 기준 사주년)로 판정 — 일지 아님 */
       ilju: ganjiName(dayGan, dayJi), iljuHanja: ganjiHanja(dayGan, dayJi)
     };
 
