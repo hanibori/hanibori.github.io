@@ -302,14 +302,7 @@
       secs = ordered;
     }
 
-    html += '<div class="pillars">' +
-      pillarHTML('시주', chart.pillars.hour, false) +
-      pillarHTML('일주', chart.pillars.day, true) +
-      pillarHTML('월주', chart.pillars.month, false) +
-      pillarHTML('년주', chart.pillars.year, false) +
-      '</div>';
-
-    /* 비주얼 노벨 대화 스테이지 (도사가 무대에서 직접 말을 건다) */
+    /* 웹툰 한 컷 스테이지 (도사가 컷 안에서 직접 말을 건다) */
     html += '<div id="vn-root"></div>';
 
     /* 여덟 글자 */
