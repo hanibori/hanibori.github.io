@@ -14,6 +14,12 @@ saju-site/
 ├── compatibility.html    궁합 (두 사람 생년월일 · 심층 궁합 리포트 7장)
 ├── newyear-2027.html     2027 정미년 신년운세 (심층 리포트 6장 · 월별 캘린더)
 ├── guide.html            오행·십신·60갑자 일주 가이드
+├── guide-manseryeok.html   칼럼 01 — 만세력과 사주팔자 여덟 글자
+├── guide-oheng.html        칼럼 02 — 오행 상생상극·신강신약·용신
+├── guide-sipseong.html     칼럼 03 — 십성 열 가지와 성격·직업·재물
+├── guide-daeun.html        칼럼 04 — 대운·세운과 인생 전환점
+├── guide-compatibility.html 칼럼 05 — 사주 궁합 보는 법과 사례
+├── guide-2027-zodiac.html  칼럼 06 — 2027 정미년 12띠별 신년운세
 ├── about.html            소개
 ├── privacy.html          개인정보처리방침
 ├── css/style.css         디자인 (다크 잉크 + 골드 + 테마별 톤, 모바일 우선)
@@ -72,7 +78,7 @@ saju-site/
 
 2026-11-27: 애드센스가 루트 도메인만 받아서(경로 URL 거부, ads.txt를 사이트 루트에서 찾음) 저장소를 `hanibori/unsedosa` → `hanibori/hanibori.github.io` 로 이름을 바꾸고 사이트를 루트로 옮겼습니다. 옛 주소 `https://hanibori.github.io/unsedosa/` 는 이제 404입니다. 애드센스 사이트 목록에는 `hanibori.github.io` 로 등록되어 있습니다.
 
-1. 다른 곳에 배포할 때는 `sitemap.xml`(6곳), `robots.txt`(`Sitemap:`), 각 페이지 `<meta property="og:image">` 의 `https://hanibori.github.io/` 부분을 새 주소로 바꿉니다.
+1. 다른 곳에 배포할 때는 `sitemap.xml`(12곳), `robots.txt`(`Sitemap:`), 각 페이지 `<meta property="og:image">` 의 `https://hanibori.github.io/` 부분을 새 주소로 바꿉니다.
 2. GitHub 저장소 Settings → Pages → Branch: `main` / 폴더: `/ (root)` 로 지정하면 `https://아이디.github.io/` 에서 열립니다.
 3. AdSense 자동 광고 스크립트(`ca-pub-3523393668102318`)는 모든 페이지 `<head>`에 들어가 있고, `ads.txt`도 루트에 있습니다. 수동 광고 단위를 쓰려면 `index.html` 피드의 슬롯 주석 자리에 실제 슬롯 코드를 넣습니다.
 

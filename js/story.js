@@ -831,4 +831,5 @@
     compatBeats: compatBeats,
     newyearBeats: newyearBeats
   };
-})(window);
+  if (typeof module !== 'undefined' && module.exports) module.exports = global.Story;
+})(typeof window !== 'undefined' ? window : globalThis);
