@@ -26,7 +26,7 @@
   var GAN_YANG = [true, false, true, false, true, false, true, false, true, false];
   var JI_ELEM = ['수', '토', '목', '목', '토', '화', '화', '토', '금', '금', '토', '수'];
   /* 지지의 정기(본기) 천간 */
-  var JI_MAIN_GAN = [9, 5, 0, 1, 4, 2, 6, 7, 8, 9, 4, 0];
+  var JI_MAIN_GAN = [9, 5, 0, 1, 4, 2, 3, 5, 6, 7, 4, 8];
 
   var ELEMS = ['목', '화', '토', '금', '수'];
   var SAENG = { '목': '화', '화': '토', '토': '금', '금': '수', '수': '목' };  /* 상생 */
