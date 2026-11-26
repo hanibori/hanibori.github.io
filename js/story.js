@@ -299,6 +299,8 @@
     }
 
     function render(id, userSay) {
+      clearTimeout(pending);
+      pending = null;
       var i = order.indexOf(id);
       if (i < 0) return;
       idx = i;
@@ -335,6 +337,7 @@
     }
 
     function advance() {
+      if (pending) return;   /* 선택지에 대답하는 중이면 그 대답을 먼저 들려준다 */
       if (finishTyping()) return;
       var nextId = order[idx + 1];
       if (nextId) render(nextId);
@@ -342,6 +345,7 @@
     function back() {
       if (idx === 0) return;
       clearTimeout(pending);
+      pending = null;
       render(order[idx - 1]);
     }
 
