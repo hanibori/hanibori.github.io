@@ -372,10 +372,12 @@
     html += '</div>'; /* #vn-report 닫기 */
 
     /* 액션 */
+    html += shareBoxHTML('share-btn', 'copy-link',
+      '이 사주, 친구 사주랑 나란히 놓고 볼까?',
+      '카톡으로 보내면 친구도 3초 만에 자기 사주를 볼 수 있어요.');
+
     html += '<div class="actions">' +
-      '<button class="btn btn-primary" id="save-card">결과 카드 저장</button>' +
-      '<button class="btn btn-ghost" id="share-btn">카톡·SNS로 공유</button>' +
-      '<button class="btn btn-ghost" id="copy-link">링크 복사</button>' +
+      '<button class="btn btn-ghost" id="save-card">결과 카드 저장</button>' +
       '<a class="btn btn-ghost" href="compatibility.html">궁합 보기</a>' +
       '<button class="btn btn-ghost" id="again-btn">다시 풀기</button>' +
       '</div>';
@@ -409,7 +411,7 @@
         beats: story.beats,
         onAction: function (run) {
           if (run === 'card') saveCard(chart);
-          else if (run === 'share') share(chart);
+          else if (run === 'share') shareOrCopy('index', sajuShareText(chart));
           else if (run === 'theme') {
             var sw = qs('.theme-switch');
             if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -479,10 +481,10 @@
     }
 
     qs('#save-card').addEventListener('click', function () { saveCard(chart); });
-    qs('#share-btn').addEventListener('click', function () { share(chart); });
-    qs('#copy-link').addEventListener('click', function () {
-      copyText(shareText(chart) + '\n' + location.href, '링크와 결과 요약을 복사했어요');
+    qs('#share-btn').addEventListener('click', function () {
+      shareOrCopy('index', sajuShareText(chart));
     });
+    qs('#copy-link').addEventListener('click', function () { copyLink('index'); });
     qs('#again-btn').addEventListener('click', function () {
       var r = qs('#result');
       r.classList.remove('show');
@@ -626,11 +628,67 @@
     toast('‘' + t.name + '’를 보려면 생년월일만 알려주게');
   }
 
-  function shareText(chart) {
-    return '🔮 ' + (chart.input.name || '나') + '의 사주: ' +
-      chart.dayMaster.ilju + '(' + chart.dayMaster.iljuHanja + ') · ' +
-      chart.dayMaster.animal + '띠 · ' + chart.dayMaster.elem + ' 기운 / ' +
-      '2027 정미년 ' + chart.years[1].ganSipsin + ' 운';
+  /* ---------- 공유 (카톡·메시지 바이럴) ---------- */
+  var SHARE_SITE = 'https://hanibori.github.io/';
+  var SHARE_PAGE = {
+    index: { file: '', title: '운세도사 — 무료 사주풀이' },
+    compat: { file: 'compatibility.html', title: '운세도사 — 무료 궁합' },
+    newyear: { file: 'newyear-2027.html', title: '운세도사 — 2027 신년운세' }
+  };
+  function shareURL(page) {
+    return SHARE_SITE + (SHARE_PAGE[page] ? SHARE_PAGE[page].file : '');
+  }
+  /* 공유 문구 끝에는 항상 그 페이지의 정식 주소가 붙는다 (친구가 눌러서 바로 들어오게) */
+  function shareText(page, headline, detail) {
+    return headline + (detail ? '\n' + detail : '') + '\n' + shareURL(page);
+  }
+  /* 모바일이면 시스템 공유 시트(카톡·메시지 등), 안 되면 클립보드 복사 + 안내 */
+  function shareOrCopy(page, text) {
+    function fallback() { copyText(text, '복사됐어요! 카톡에 붙여넣어 보세요'); }
+    if (!navigator.share) { fallback(); return; }
+    var p;
+    try {
+      p = navigator.share({ title: (SHARE_PAGE[page] || SHARE_PAGE.index).title, text: text });
+    } catch (e) { fallback(); return; }
+    if (p && p.catch) {
+      p.catch(function (err) {
+        if (err && err.name === 'AbortError') return; /* 사용자가 공유창을 닫은 경우 */
+        fallback();
+      });
+    }
+  }
+  function copyLink(page) {
+    copyText(shareURL(page), '링크를 복사했어요. 카톡에 붙여넣어 보세요!');
+  }
+  /* 결과 화면 공유 블록 — 세 페이지가 같은 모양을 쓴다 */
+  function shareBoxHTML(shareId, copyId, lead, note) {
+    return '<div class="share-box">' +
+      '<p class="share-lead">' + lead + '</p>' +
+      '<div class="share-row">' +
+      '<button type="button" class="btn btn-primary" id="' + shareId + '">친구한테 공유하기</button>' +
+      '<button type="button" class="btn btn-ghost" id="' + copyId + '">링크 복사</button>' +
+      '</div>' +
+      '<p class="share-note">' + note + '</p>' +
+      '</div>';
+  }
+  function sajuShareText(chart) {
+    var nm = chart.input && chart.input.name ? chart.input.name + '의' : '내';
+    var dm = chart.dayMaster;
+    var y27 = chart.years && chart.years[1];
+    var detail = dm.ilju + '(' + dm.iljuHanja + ') · ' + dm.animal + '띠 · ' + dm.elem + ' 기운';
+    if (chart.daeun && chart.daeun.current) detail += ' · 대운 ' + chart.daeun.current.ganzi;
+    if (y27) detail += '\n2027 정미년 ' + y27.ganSipsin + ' 운';
+    return shareText('index', '🔮 ' + nm + ' 사주 풀이 — 너도 3초면 볼 수 있어', detail);
+  }
+  function compatShareText(nmA, nmB, r) {
+    var detail = r.relName + ' · 끌림 ' + r.gauges[0].value + ' / 대화 ' + r.gauges[1].value +
+      ' / 안정 ' + r.gauges[3].value;
+    return shareText('compat', '💞 ' + nmA + ' · ' + nmB + ' 궁합 ' + r.score + '점 (' + r.grade + ')', detail);
+  }
+  function newyearShareText(nm, r, y27) {
+    var detail = '흐름 지수 ' + r.index + '점 · ' + y27.ganSipsin + ' 운';
+    if (r.moneyMonths.length) detail += ' · 돈 ' + r.moneyMonths.map(function (m) { return m.m; }).join('·') + '월';
+    return shareText('newyear', '🔮 ' + nm + '의 2027 정미년 운세 — 너도 3초면 볼 수 있어', detail);
   }
 
   function copyText(text, msg) {
@@ -647,19 +705,6 @@
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () { toast(msg || '복사했어요'); }, fallback);
     } else fallback();
-  }
-
-  function share(chart) {
-    var data = {
-      title: '운세도사 — 무료 사주풀이',
-      text: shareText(chart),
-      url: location.href
-    };
-    if (navigator.share) {
-      navigator.share(data).catch(function () { });
-    } else {
-      copyText(data.text + '\n' + data.url, '공유 문구를 복사했어요. 카톡에 붙여넣으세요!');
-    }
   }
 
   /* ---------- 결과 카드 이미지 ---------- */
@@ -1199,10 +1244,12 @@
       html += deepListHTML(r.sections);
       html += '</div>'; /* #vn-report 닫기 */
 
+      html += shareBoxHTML('compat-share', 'compat-copy',
+        '우리 궁합, 두 사람 다 같이 볼까?',
+        '카톡으로 보내면 친구도 생일만 넣고 바로 자기 궁합을 볼 수 있어요.');
       html += '<div class="actions">' +
-        '<button class="btn btn-primary" id="compat-share">궁합 공유하기</button>' +
-        '<button class="btn btn-ghost" id="compat-copy">링크 복사</button>' +
-        '<a class="btn btn-ghost" href="index.html">내 사주 보기</a></div>';
+        '<a class="btn btn-ghost" href="index.html">내 사주 보기</a>' +
+        '<a class="btn btn-ghost" href="newyear-2027.html">2027 운세 보기</a></div>';
       html += '<p class="note">궁합 점수는 일간·일지의 합충과 오행 보완도로 계산한 참고 지표입니다. 점수보다 두 사람이 어디서 맞고 어디서 어긋나는지가 더 중요합니다. 입력한 생년월일은 서버로 전송되지 않습니다.</p>';
 
       host.innerHTML = html;
@@ -1226,16 +1273,11 @@
         });
       }
 
-      var sum = '💞 ' + nmA + ' · ' + nmB + ' 궁합 ' + r.score + '점 (' + r.grade + ')\n' +
-        r.relName + ' · 끌림 ' + r.gauges[0].value + ' / 대화 ' + r.gauges[1].value + ' / 안정 ' + r.gauges[3].value;
+      var sum = compatShareText(nmA, nmB, r);
       var sh = qs('#compat-share');
-      if (sh) sh.addEventListener('click', function () {
-        if (navigator.share) {
-          navigator.share({ title: '운세도사 궁합', text: sum, url: location.href }).catch(function () { });
-        } else copyText(sum + '\n' + location.href, '궁합 결과를 복사했어요');
-      });
+      if (sh) sh.addEventListener('click', function () { shareOrCopy('compat', sum); });
       var cp = qs('#compat-copy');
-      if (cp) cp.addEventListener('click', function () { copyText(sum + '\n' + location.href, '궁합 결과를 복사했어요'); });
+      if (cp) cp.addEventListener('click', function () { copyLink('compat'); });
 
       setTimeout(function () {
         var top = host.getBoundingClientRect().top + global.pageYOffset - 64;
@@ -1370,9 +1412,10 @@
       html += deepListHTML(r.sections);
       html += '</div>'; /* #vn-report 닫기 */
 
+      html += shareBoxHTML('ny-share', 'ny-copy',
+        '2027년, 친구는 어떤 해인지 궁금하지 않아?',
+        '카톡으로 보내면 친구도 3초 만에 자기 2027 운세를 볼 수 있어요.');
       html += '<div class="actions">' +
-        '<button class="btn btn-primary" id="ny-share">2027 운세 공유</button>' +
-        '<button class="btn btn-ghost" id="ny-copy">링크 복사</button>' +
         '<a class="btn btn-ghost" href="compatibility.html">궁합 보기</a>' +
         '<a class="btn btn-ghost" href="index.html">내 사주 보기</a></div>';
       html += '<p class="note">2027년 신년운세는 세운(歲運)의 기운을 내 사주에 겹쳐 해석한 참고 자료입니다. 같은 해라도 사주 구성에 따라 체감은 크게 달라집니다. 입력한 생년월일은 서버로 전송되지 않습니다.</p>';
@@ -1398,15 +1441,11 @@
         });
       }
 
-      var sum = '🔮 ' + nm + '의 2027 정미년: 흐름 지수 ' + r.index + '점 · ' + y27.ganSipsin + ' 운' +
-        (r.moneyMonths.length ? ' · 돈 ' + r.moneyMonths.map(function (m) { return m.m; }).join('·') + '월' : '');
+      var sum = newyearShareText(nm, r, y27);
       var sh = qs('#ny-share');
-      if (sh) sh.addEventListener('click', function () {
-        if (navigator.share) navigator.share({ title: '운세도사 2027 신년운세', text: sum, url: location.href }).catch(function () { });
-        else copyText(sum + '\n' + location.href, '2027 운세를 복사했어요');
-      });
+      if (sh) sh.addEventListener('click', function () { shareOrCopy('newyear', sum); });
       var cp = qs('#ny-copy');
-      if (cp) cp.addEventListener('click', function () { copyText(sum + '\n' + location.href, '2027 운세를 복사했어요'); });
+      if (cp) cp.addEventListener('click', function () { copyLink('newyear'); });
 
       setTimeout(function () {
         var top = host.getBoundingClientRect().top + global.pageYOffset - 64;
