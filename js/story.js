@@ -13,17 +13,20 @@
     doryeong: {
       name: '도사 도령', role: '정통사주 · 총운',
       face: 'assets/char-doryeong-face.webp?v=2', body: 'assets/char-doryeong.webp?v=2',
-      alt: '부채를 든 꽃미남 도령'
+      alt: '부채를 든 꽃미남 도령',
+      fx: 'ember'
     },
     seonnyeo: {
       name: '선녀 도사', role: '궁합 · 인연',
       face: 'assets/char-seonnyeo-face.webp?v=2', body: 'assets/char-seonnyeo.webp?v=2',
-      alt: '우아한 선녀 도사'
+      alt: '우아한 선녀 도사',
+      fx: 'petal'
     },
     chic: {
       name: '시크 역술가', role: '2027 정미년',
       face: 'assets/char-chic-face.webp?v=2', body: 'assets/char-chic.webp?v=2',
-      alt: '시크한 역술가'
+      alt: '시크한 역술가',
+      fx: 'star'
     }
   };
 
@@ -624,6 +627,7 @@
             '<span class="wt-halftone"></span>' +
             '<span class="wt-speck s1"></span><span class="wt-speck s2"></span><span class="wt-speck s3"></span>' +
           '</div>' +
+          '<canvas class="wt-fx" id="wt-fx" aria-hidden="true"></canvas>' +
           '<div class="wt-figure" aria-hidden="true">' +
             '<img class="wt-char" src="' + cast.body + '" alt="' + esc(cast.alt) + '" width="660" height="870" decoding="async">' +
           '</div>' +
@@ -820,6 +824,10 @@
     }
 
     render(order[0]);
+
+    /* 테마별 빛 입자 — 도령은 금빛 불티, 선녀는 꽃빛, 역술가는 은빛 별빛 */
+    var fxEl = $('#wt-fx');
+    if (fxEl && global.FX && global.FX.mount) global.FX.mount(fxEl, cast.fx || 'ember');
 
     return { go: function (id) { respond(id); }, back: back, advance: advance };
   }
