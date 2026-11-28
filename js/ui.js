@@ -995,9 +995,9 @@
 
   /* ---------- 캐릭터 ---------- */
   var CHARS = {
-    doryeong: { file: 'assets/char-doryeong.webp', face: 'assets/char-doryeong-face.webp', label: '꽃미남 도령' },
-    seonnyeo: { file: 'assets/char-seonnyeo.webp', face: 'assets/char-seonnyeo-face.webp', label: '우아한 선녀' },
-    chic: { file: 'assets/char-chic.webp', face: 'assets/char-chic-face.webp', label: '시크한 역술가' }
+    doryeong: { file: 'assets/char-doryeong.webp?v=2', face: 'assets/char-doryeong-face.webp?v=2', label: '꽃미남 도령' },
+    seonnyeo: { file: 'assets/char-seonnyeo.webp?v=2', face: 'assets/char-seonnyeo-face.webp?v=2', label: '우아한 선녀' },
+    chic: { file: 'assets/char-chic.webp?v=2', face: 'assets/char-chic-face.webp?v=2', label: '시크한 역술가' }
   };
   function charOfCat(cat) {
     return cat === 'love' ? 'seonnyeo' : cat === 'jeontong' ? 'doryeong' : 'chic';

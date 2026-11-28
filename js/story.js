@@ -12,17 +12,17 @@
   var CASTS = {
     doryeong: {
       name: '도사 도령', role: '정통사주 · 총운',
-      face: 'assets/char-doryeong-face.webp', body: 'assets/char-doryeong.webp',
+      face: 'assets/char-doryeong-face.webp?v=2', body: 'assets/char-doryeong.webp?v=2',
       alt: '부채를 든 꽃미남 도령'
     },
     seonnyeo: {
       name: '선녀 도사', role: '궁합 · 인연',
-      face: 'assets/char-seonnyeo-face.webp', body: 'assets/char-seonnyeo.webp',
+      face: 'assets/char-seonnyeo-face.webp?v=2', body: 'assets/char-seonnyeo.webp?v=2',
       alt: '우아한 선녀 도사'
     },
     chic: {
       name: '시크 역술가', role: '2027 정미년',
-      face: 'assets/char-chic-face.webp', body: 'assets/char-chic.webp',
+      face: 'assets/char-chic-face.webp?v=2', body: 'assets/char-chic.webp?v=2',
       alt: '시크한 역술가'
     }
   };
