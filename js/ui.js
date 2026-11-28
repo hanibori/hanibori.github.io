@@ -401,23 +401,31 @@
 
     host.innerHTML = html;
 
+    /* 결과는 일단 열고 본다 — 아래 대사·버튼 배선에서 무슨 일이 나도 결과가 안 보이는 일은 없게 */
+    var res = qs('#result');
+    if (res) res.classList.add('show');
+
     /* 무대에 도사를 세운다 */
-    var story = global.Story ? global.Story.indexBeats(chart, themeKey) : null;
-    var vn = null;
-    if (story && global.Story) {
-      vn = global.Story.mount({
-        host: qs('#vn-root'),
-        cast: story.cast,
-        beats: story.beats,
-        onAction: function (run) {
-          if (run === 'card') saveCard(chart);
-          else if (run === 'share') shareOrCopy('index', sajuShareText(chart));
-          else if (run === 'theme') {
-            var sw = qs('.theme-switch');
-            if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try {
+      var story = global.Story ? global.Story.indexBeats(chart, themeKey) : null;
+      if (story && global.Story) {
+        global.Story.mount({
+          host: qs('#vn-root'),
+          cast: story.cast,
+          role: story.role,
+          beats: story.beats,
+          onAction: function (run) {
+            if (run === 'card') saveCard(chart);
+            else if (run === 'share') shareOrCopy('index', sajuShareText(chart));
+            else if (run === 'theme') {
+              var sw = qs('.theme-switch');
+              if (sw) sw.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }
-        }
-      });
+        });
+      }
+    } catch (err) {
+      if (global.console && global.console.error) global.console.error('[story]', err);
     }
 
     /* 전체 리포트 토글 */
@@ -495,8 +503,6 @@
       b.addEventListener('click', function () { openTheme(b.getAttribute('data-theme'), chart); });
     });
 
-    var res = qs('#result');
-    res.classList.add('show');
     setTimeout(scrollResult, 60);
   }
 

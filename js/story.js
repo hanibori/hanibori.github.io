@@ -149,6 +149,11 @@
   }
 
   /* ---------- 대화 대본 만들기 : 메인 사주 ---------- */
+  /* 테마별 무대 캐릭터 — 정통·총운은 도령, 연애·궁합은 선녀, 재물·팩폭·신년은 역술가 */
+  var CAST_OF_CAT = { jeontong: 'doryeong', love: 'seonnyeo', money: 'chic', packpok: 'chic', newyear: 'chic' };
+  /* 테마 색(tone) → 컷 분위기 */
+  var MOOD_OF_TONE = { gold: 'gold', rose: 'rose', jade: 'jade', violet: 'violet', ember: 'crimson', sky: 'blue' };
+
   var ASK_LABEL = {
     summary: '전체 운세부터 들을래',
     personality: '내 성격 좀 더 알려줘',
@@ -167,6 +172,8 @@
     var g = F.GAN[chart.dayMaster.gan];
     var m = F.mascotLines(chart);
     var theme = themeKey && T && T.map[themeKey] ? T.map[themeKey] : null;
+    /* 테마로 들어왔으면 그 테마의 첫마디부터 들려준다 (배우자상이면 배우자 이야기부터) */
+    var themeIntro = theme && T.intro ? T.intro(theme, chart) : '';
     var y27 = chart.years[1];
     var P = chart.pillars;
     var who = chart.input.name ? chart.input.name + '님' : '자네';
@@ -199,7 +206,8 @@
         id: 'hello', shot: 'mid', face: 'l', mood: 'night',
         chips: [chart.dayMaster.ilju + ' 일주', chart.dayMaster.animal + '띠', chart.strength],
         lines: [
-          mark('어서 오게, ' + who + '. 여덟 글자를 세어보니 **' + ilju + '** 일주로구만.', []),
+          mark(theme ? '이제 ' + who + '의 여덟 글자를 세어보니 **' + ilju + '** 일주로구만.'
+            : '어서 오게, ' + who + '. 여덟 글자를 세어보니 **' + ilju + '** 일주로구만.', []),
           '**' + g.short + '** 기운을 타고났네. ' + themeLine
         ]
       },
@@ -285,8 +293,17 @@
       }
     ];
 
+    /* 테마 첫 컷 — 고른 테마의 첫마디로 시작한다 */
+    if (theme && themeIntro) {
+      beats.unshift({
+        id: 'theme-open', shot: 'mid', face: 'l', mood: MOOD_OF_TONE[theme.tone] || 'night',
+        chips: [theme.name, chart.dayMaster.ilju + ' 일주', '용신 ' + chart.yongsin.elem],
+        lines: packBubbles(sentences(themeIntro), 46)
+      });
+    }
+
     /* 테마별 초점 순서에 맞춰 중간 이야기 순서를 바꾼다 */
-    var fixedHead = ['hello', 'pillars'];
+    var fixedHead = theme && themeIntro ? ['theme-open', 'hello', 'pillars'] : ['hello', 'pillars'];
     var middle = ['summary', 'personality', 'elem', 'money', 'job', 'love', 'daeun', 'year2027', 'remedy'];
     if (theme && theme.focus && theme.focus.length) {
       var first = [], rest = [];
@@ -306,7 +323,11 @@
       if (ASK_LABEL[b.id]) b.ask = ASK_LABEL[b.id];
     });
 
-    return { cast: 'doryeong', beats: ordered };
+    return {
+      cast: theme ? (CAST_OF_CAT[theme.cat] || 'doryeong') : 'doryeong',
+      role: theme ? theme.catLabel : null,
+      beats: ordered
+    };
   }
 
   /* ---------- 대화 대본 만들기 : 궁합 ---------- */
@@ -640,7 +661,7 @@
             '<button type="button" class="wt-back" id="wt-back" aria-label="이전 컷 다시 보기">‹</button>' +
             '<span class="wt-step"><b id="wt-cur">1</b><i>/</i><span id="wt-total">' + beats.length + '</span></span>' +
             '<span class="wt-who"><span class="wt-ava"><img src="' + cast.face + '" alt="" width="40" height="40"></span>' +
-              '<span class="wt-whotx"><b>' + esc(cast.name) + '</b><small>' + esc(cast.role) + '</small></span></span>' +
+              '<span class="wt-whotx"><b>' + esc(cast.name) + '</b><small>' + esc(opts.role || cast.role) + '</small></span></span>' +
           '</div>' +
           '<div class="wt-chips" id="wt-chips"></div>' +
           '<span class="wt-cue" id="wt-cue" aria-hidden="true">▸</span>' +
