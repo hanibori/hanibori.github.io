@@ -812,6 +812,33 @@
     return { sections: sections, byKey: byKey, totalChars: total, keywords: DG.words, ilju: ilju };
   };
 
+  /* ---------- 테마별 대본용 요약 프로필 ----------
+     심층 리포트가 쓰는 일간·일지·십신 데이터를 대본 쪽에서도 그대로 쓸 수 있게 모아 준다. */
+  FORTUNE.profile = function (chart) {
+    var Saju = global.Saju;
+    var gan = chart.dayMaster.gan, ji = chart.pillars.day.ji;
+    var C = chart.sipsinCount;
+    var y = chart.yongsin;
+    var top = ORDER10.slice().sort(function (a, b) { return (C[b] || 0) - (C[a] || 0); })[0];
+    var gw = chart.groupWeights;
+    var dominant = ['비겁', '식상', '재성', '관성', '인성'].slice().sort(function (a, b) { return gw[b] - gw[a]; })[0];
+    var partnerJi = partnerBranches(ji);
+    return {
+      gan: GAN[gan], deepGan: DEEP_GAN[gan],
+      ji: JI[ji], deepJi: DEEP_JI[ji],
+      top: top, sipsin: DEEP_SIPSIN[top], dominant: dominant,
+      count: C,
+      bigo: C['비견'] + C['겁재'], siksang: C['식신'] + C['상관'],
+      jae: C['편재'] + C['정재'], gwan: C['편관'] + C['정관'], inGroup: C['편인'] + C['정인'],
+      elemAnimals: ELEM_ANIMALS[y.elem].map(function (a) { return a + '띠'; }),
+      partnerAnimals: partnerJi.map(function (b) { return Saju.ANIMALS[b] + '띠'; }),
+      elem: y.elem, gisin: y.gisin, huissin: y.huisin, group: y.group,
+      elementInfo: ELEM[y.elem], deepElem: DEEP_ELEM[y.elem],
+      gisinInfo: ELEM[y.gisin], gisinDeep: DEEP_ELEM[y.gisin],
+      daeunTalk: DAEUN_TALK, daeunText: DAEUN_TEXT
+    };
+  };
+
   /* ---------- 도사의 말풍선 문장 만들기 ---------- */
   FORTUNE.mascotLines = function (chart) {
     var g = GAN[chart.dayMaster.gan];

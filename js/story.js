@@ -166,7 +166,7 @@
     remedy: '개운법도 알려줘'
   };
 
-  function indexBeats(chart, themeKey) {
+  function indexBeatsJeontong(chart, themeKey) {
     var F = global.Fortune, T = global.Themes;
     var deep = F.deep(chart);
     var g = F.GAN[chart.dayMaster.gan];
@@ -328,6 +328,498 @@
       role: theme ? theme.catLabel : null,
       beats: ordered
     };
+  }
+
+  /* ============================================================
+     테마별 맞춤 컷 흐름
+     - 정통·총운은 기존 종합 풀코스(indexBeatsJeontong) 그대로
+     - 연애·재물·팩폭·신년은 그 테마에만 있는 컷을 따로 세운다
+       (배우자 자리 → 원하는 상 → 갈등 → 인연 시기 …처럼 순서와 내용이 통째로 달라진다)
+     ============================================================ */
+  function firstSentence(t) { var s = sentences(t); return s[0] || clean(t); }
+  function nthSentence(t, n) { var s = sentences(t); return s[n] || s[0] || clean(t); }
+
+  /* 리포트용 해요체 문장을 도사의 하게체로 (문장 끝맺음만 바꾼다) */
+  function speak(t) {
+    return clean(t)
+      .replace(/하십시오\./g, '하게.')
+      .replace(/하세요\./g, '하게.')
+      .replace(/해요\./g, '하게.')
+      .replace(/입니다\./g, '일세.')
+      .replace(/됩니다\./g, '되네.')
+      .replace(/합니다\./g, '하네.')
+      .replace(/갑니다\./g, '가네.')
+      .replace(/옵니다\./g, '오네.')
+      .replace(/큽니다\./g, '크네.')
+      .replace(/립니다\./g, '리네.')
+      .replace(/있습니다\./g, '있네.')
+      .replace(/없습니다\./g, '없네.')
+      .replace(/킵니다\./g, '키네.')
+      .replace(/집니다\./g, '지네.')
+      .replace(/습니다\./g, '네.')
+      .replace(/니다\./g, '네.');
+  }
+
+  function themeCtx(chart, theme) {
+    var F = global.Fortune, T = global.Themes;
+    var deep = F.deep(chart);
+    var prof = F.profile(chart);
+    var d = chart.daeun;
+    return {
+      chart: chart, theme: theme, deep: deep, prof: prof, F: F, T: T,
+      g: F.GAN[chart.dayMaster.gan], m: F.mascotLines(chart),
+      P: chart.pillars, ji: F.JI[chart.pillars.day.ji], y: chart.yongsin,
+      y27: chart.years[1], cur: d.current, nxt: d.next,
+      who: chart.input.name ? chart.input.name + '님' : '자네',
+      ilju: chart.dayMaster.ilju,
+      intro: T.intro ? T.intro(theme, chart) : ''
+    };
+  }
+
+  /* 테마 첫 컷 — 고른 테마의 첫마디 */
+  function openCut(c) {
+    var intro = c.intro || '어서 오게. 여덟 글자부터 풀어주지.';
+    return {
+      id: 'theme-open', shot: 'mid', face: 'l', mood: MOOD_OF_TONE[c.theme.tone] || 'night',
+      chips: [c.theme.name, c.ilju + ' 일주', '용신 ' + c.y.elem],
+      lines: packBubbles(sentences(intro), 46)
+    };
+  }
+
+  /* 테마 마지막 컷 — 리포트·공유로 이어지는 자리 */
+  function closeCut(c, chips) {
+    var deep = c.deep, m = c.m;
+    return {
+      id: 'closing', shot: 'sky', face: 'r', mood: 'dawn',
+      chips: chips || ['심층 리포트 ' + deep.totalChars.toLocaleString('ko-KR') + '자',
+        '읽는 시간 약 ' + Math.max(1, Math.round(deep.totalChars / 480)) + '분'],
+      lines: [
+        mark(sentences(m.closing)[0] || m.closing, ['타고난 재료']),
+        '재료를 어떻게 쓰느냐는 ' + c.who + '의 몫이야. 더 깊은 풀이는 아래 **전체 리포트**에 있네.'
+      ],
+      actions: [
+        { label: '결과 카드로 저장할래', run: 'card' },
+        { label: '친구한테 공유할래', run: 'share' },
+        { label: '다른 테마도 들어볼래', run: 'theme' }
+      ]
+    };
+  }
+
+  /* 테마별 컷 묶음 — 첫 컷 + 고른 순서 + 마지막 컷 */
+  function assemble(c, map, order, ASK, OVR) {
+    var out = [openCut(c)];
+    (order || []).forEach(function (id) {
+      var b = map[id];
+      if (!b) return;
+      b.chips = (b.chips || []).filter(function (x) { return !!x; }).slice(0, 4);
+      if (OVR && OVR[b.id]) b.ask = OVR[b.id];
+      else if (ASK && ASK[b.id]) b.ask = ASK[b.id];
+      out.push(b);
+    });
+    out.push(closeCut(c));
+    return out;
+  }
+
+  function money27Line(y27) {
+    var s = y27.ganSipsin;
+    if (s === '정재' || s === '편재') return '돈의 물길이 트이니 둑부터 쌓게.';
+    if (s === '정관' || s === '편관') return '이름과 자리가 오르니 준비한 것을 내놓게.';
+    if (s === '겁재') return '경쟁과 변동이 크니 큰 지출은 한 박자 늦추게.';
+    return '벌이보다 다지기에 좋은 해일세.';
+  }
+  function loveHit27(chart, y27) {
+    var star = chart.input.gender === 'm' ? ['정재', '편재'] : ['정관', '편관'];
+    return star.indexOf(y27.ganSipsin) >= 0 || star.indexOf(y27.jiSipsin) >= 0;
+  }
+
+  /* ---------- 연애·솔로 : 배우자 자리 → 원하는 상 → 갈등 → 인연 시기 → 조언 ---------- */
+  var LOVE_ASK = {
+    'l-seat': '배우자 자리부터 볼래',
+    'l-want': '내 배우자상은?',
+    'l-style': '내 연애 스타일은?',
+    'l-pattern': '왜 자꾸 어긋날까?',
+    'l-match': '잘 맞는 띠는?',
+    'l-timing': '인연은 언제 와?',
+    'l-advice': '연애 조언 해줘',
+    'l-wed': '결혼 생활은 어떨까',
+    'l-som': '다가갈 타이밍은?',
+    'l-reunion': '재회할 수 있을까',
+    'l-newface': '새 인연은 올까',
+    'l-end': '한 줄로 정리해줘'
+  };
+
+  function loveBeats(chart, theme) {
+    var c = themeCtx(chart, theme);
+    var prof = c.prof, DG = prof.deepGan, DJ = prof.deepJi, TS = prof.sipsin, y = c.y, J = c.ji;
+    var y27 = c.y27, nxt = c.nxt, cur = c.cur;
+    var elemBands = prof.elemAnimals.join('·');
+    var partnerBands = prof.partnerAnimals.join('·');
+    var nowHit = loveHit27(chart, y27);
+    var star = chart.input.gender === 'm' ? ['정재', '편재'] : ['정관', '편관'];
+    var nxtHit = !!(nxt && (star.indexOf(nxt.ganSipsin) >= 0 || star.indexOf(nxt.jiSipsin) >= 0));
+    var nowStar = star.indexOf(y27.ganSipsin) >= 0 ? y27.ganSipsin
+      : (star.indexOf(y27.jiSipsin) >= 0 ? y27.jiSipsin : '');
+    var timingLines = nowHit
+      ? ['2027 정미년이 인연의 문이 열리는 해일세.', nowStar + ' 운이 들어오니 나가는 자리를 만들게.']
+      : nxtHit
+        ? ['다음 ' + nxt.ganzi + ' 대운(' + nxt.startAge + '세부터)에 인연의 문이 열리네.', '그 전까지 내 생활을 정돈해두면 만남의 질이 달라지지.']
+        : ['인연의 별이 크게 드러나는 때는 아직 아닐세.', '찾기보다 생활 반경을 넓히는 쪽이 효율일세.'];
+
+    var map = {
+      'l-seat': {
+        id: 'l-seat', shot: 'mid', face: 'r', mood: 'rose',
+        chips: [J.name + ' 일지', J.keyword, '배우자 자리'],
+        lines: bub(['배우자 자리는 일지 ' + J.name + ', ' + J.keyword + '의 결일세.',
+          speak(firstSentence(DJ.spouseDetail))], [J.name, J.keyword])
+      },
+      'l-want': {
+        id: 'l-want', shot: 'close', face: 'l', mood: 'dawn',
+        chips: ['원하는 배우자상', '용신 ' + y.elem, c.g.short],
+        lines: bub(['곁에 두고 싶은 사람은 ' + DG.spouseWant + '일세.',
+          '그 사람이 오면 ' + y.elem + ' 기운이 차오르지.'], ['사람', y.elem + ' 기운'])
+      },
+      'l-style': {
+        id: 'l-style', shot: 'mid', face: 'l', mood: 'violet',
+        chips: [c.g.short, '연애 스타일', J.keyword],
+        lines: bub([speak(firstSentence(DG.loveStyle)), speak(J.relation)], ['신뢰'])
+      },
+      'l-pattern': {
+        id: 'l-pattern', shot: 'close', face: 'r', mood: 'crimson',
+        chips: ['반복 갈등', TS.weak, '고칠 지점'],
+        lines: bub(['연애에서 되풀이되는 건 ' + TS.weak + '일세.',
+          speak(firstSentence(DG.loveConflict))], [TS.weak])
+      },
+      'l-match': {
+        id: 'l-match', shot: 'sky', face: 'l', mood: 'jade',
+        chips: prof.elemAnimals.slice(0, 2).concat(prof.partnerAnimals.slice(0, 2)),
+        lines: bub(['잘 맞는 상대는 ' + elemBands + '라네.',
+          partnerBands ? partnerBands + '도 귀인이라 잘 맞지.' : '대화의 속도가 비슷한 사람이 오래 가네.'],
+        [elemBands])
+      },
+      'l-timing': {
+        id: 'l-timing', shot: 'sky', face: 'r', mood: 'blue',
+        chips: ['2027 ' + y27.ganSipsin + ' 운', nxt ? '다음 대운 ' + nxt.ganzi : '대운 전',
+          chart.input.gender === 'm' ? '배우자성: 재성' : '배우자성: 관성'],
+        lines: bub(timingLines, ['2027 정미년'])
+      },
+      'l-advice': {
+        id: 'l-advice', shot: 'mid', face: 'l', mood: 'sand',
+        chips: ['연애 처방', y.elem + ' 기운', '매일 하나'],
+        lines: bub(['싸울 때 ' + (prof.siksang >= 2 ? '말이 먼저 나가는 것' : '서운함을 쌓아두는 것') + '만 조심하게.',
+          '그리고 ' + prof.deepElem.habit + ' 하나를 같이 해보게.'], ['작은 규칙'])
+      },
+      'l-wed': {
+        id: 'l-wed', shot: 'mid', face: 'r', mood: 'gold',
+        chips: ['결혼 생활', J.keyword, prof.gwan >= 1 ? '역할 분담' : '둘의 규칙'],
+        lines: bub(['일지 ' + J.name + '의 결은 살림에서도 그대로 나오네.',
+          speak(nthSentence(DJ.spouseDetail, 1))], [J.keyword])
+      },
+      'l-som': {
+        id: 'l-som', shot: 'close', face: 'r', mood: 'rose',
+        chips: ['다가갈 타이밍', c.g.short, '상대 성향'],
+        lines: bub(['마음은 소리가 없어도 글자에는 남네.',
+          '재촉하지 말고 ' + (prof.siksang >= 2 ? '말보다 행동으로 보여주게.' : '한 번에 하나씩 다가가게.')], ['타이밍'])
+      },
+      'l-reunion': {
+        id: 'l-reunion', shot: 'close', face: 'l', mood: 'indigo',
+        chips: ['재회', '이별의 원인', TS.weak],
+        lines: bub(['이별의 원인은 대개 ' + TS.weak + '에서 왔네.',
+          prof.jae + prof.gwan > 0 ? '남은 인연의 자리가 아직 비어 있지 않네.' : '인연의 자리가 비어 새 사람이 먼저 올 수 있네.'], [TS.weak])
+      },
+      'l-newface': {
+        id: 'l-newface', shot: 'mid', face: 'r', mood: 'dawn',
+        chips: ['새 인연', y.elem + ' 기운', prof.elemAnimals[0]],
+        lines: bub(['새 인연은 ' + elemBands + ' 쪽에서 오네.',
+          '옛 사람을 붙잡는 동안엔 그 문이 열리지 않네.'], [elemBands])
+      },
+      'l-end': {
+        id: 'l-end', shot: 'sky', face: 'l', mood: 'rose',
+        chips: ['한 줄 정리', J.name + ' 일지', y.elem + ' 기운'],
+        lines: bub(['정리하면 ' + J.keyword + '의 결을 가진 사람, ' +
+          (nowHit ? '2027년이 인연의 문일세.' : nxtHit ? nxt.ganzi + ' 대운이 인연의 문일세.' : '아직은 내 자리를 다지는 때일세.'),
+          '찾지 말고 자리를 만들게.'], ['인연의 문'])
+      }
+    };
+
+    var order = ({
+      'love-main': ['l-seat', 'l-style', 'l-want', 'l-pattern', 'l-match', 'l-timing', 'l-advice', 'l-end'],
+      'love-spouse': ['l-seat', 'l-want', 'l-wed', 'l-match', 'l-pattern', 'l-timing', 'l-advice', 'l-end'],
+      'love-som': ['l-style', 'l-som', 'l-want', 'l-pattern', 'l-match', 'l-timing', 'l-advice', 'l-end'],
+      'love-reunion': ['l-reunion', 'l-pattern', 'l-newface', 'l-match', 'l-timing', 'l-advice', 'l-end']
+    })[theme.key] || ['l-seat', 'l-want', 'l-pattern', 'l-match', 'l-timing', 'l-advice', 'l-end'];
+
+    var ask = theme.key === 'love-spouse' ? { 'l-timing': '결혼 시기는?' }
+      : theme.key === 'love-som' ? { 'l-timing': '그 사람과 될까?' } : null;
+    return assemble(c, map, order, LOVE_ASK, ask);
+  }
+
+  /* ---------- 재물·직업 : 새는 구멍 → 재물 그릇 → 맞는 일 → 직장 vs 사업 → 시기 ---------- */
+  var MONEY_ASK = {
+    'm-habit': '돈 새는 구멍은?',
+    'm-leak': '어디서 새는 거야?',
+    'm-bowl': '내 재물 그릇은?',
+    'm-work': '맞는 일은 뭐야?',
+    'm-org': '직장과 사업, 뭐가 맞아?',
+    'm-invest': '투자는 해도 될까?',
+    'm-timing': '돈은 언제 풀려?',
+    'm-advice': '돈 관리 조언 해줘',
+    'm-career': '피할 자리는 어디야?',
+    'm-jend': '한 줄로 정리해줘',
+    'm-end': '한 줄로 정리해줘'
+  };
+
+  function moneyBeats(chart, theme) {
+    var c = themeCtx(chart, theme);
+    var prof = c.prof, DG = prof.deepGan, DJ = prof.deepJi, TS = prof.sipsin, y = c.y;
+    var C = prof.count, y27 = c.y27, cur = c.cur;
+    var jobs = DG.jobs || [];
+    var bowl = C['편재'] > C['정재'] ? '편재가 더 많아 돈이 크게 돌아 들어오는 그릇일세.'
+      : C['정재'] > C['편재'] ? '정재가 더 많아 차곡차곡 쌓이는 그릇일세.'
+        : '정재와 편재가 반반이라 안정과 변동을 함께 가져가네.';
+    if (prof.jae === 0) bowl = '재성이 원국에 드러나지 않아 관리하는 시스템에서 돈이 모이네.';
+
+    var map = {
+      'm-habit': {
+        id: 'm-habit', shot: 'mid', face: 'l', mood: 'gold',
+        chips: ['돈 모으는 습관', '재성 ' + prof.jae + '개', '새는 곳 ' + y.gisin],
+        lines: bub(['돈은 버는 힘보다 막는 힘에서 모이네.', speak(DJ.moneyHabit)], ['막는 힘'])
+      },
+      'm-leak': {
+        id: 'm-leak', shot: 'close', face: 'r', mood: 'crimson',
+        chips: ['새는 구멍', '기신 ' + y.gisin, '비겁 ' + prof.bigo + '개'],
+        lines: bub([speak(firstSentence(DG.leak)),
+          prof.bigo >= 2 ? '사람 문제로 나가는 돈이 많으니 보증은 특히 조심하게.' : '기분 따라 트는 지출이 구멍일세.'], ['구멍'])
+      },
+      'm-bowl': {
+        id: 'm-bowl', shot: 'sky', face: 'l', mood: 'jade',
+        chips: ['재성 ' + prof.jae + '개', '편재 ' + C['편재'], '정재 ' + C['정재']],
+        lines: bub([bowl, '재성 ' + prof.jae + '개, 식상 ' + prof.siksang + '개로 보는 그릇일세.'], [y.elem + ' 기운'])
+      },
+      'm-work': {
+        id: 'm-work', shot: 'mid', face: 'r', mood: 'sand',
+        chips: jobs.slice(0, 3).concat(['용신 ' + y.elem]),
+        lines: bub([jobs.slice(0, 2).join('·') + ' 쪽이 자네 자리일세.',
+          '용신 ' + y.elem + ' 기운이 도는 ' + prof.deepElem.jobField + '도 좋네.'], [jobs[0]])
+      },
+      'm-org': {
+        id: 'm-org', shot: 'close', face: 'l', mood: 'violet',
+        chips: ['직장 vs 사업', '관성 ' + prof.gwan + '개', chart.strength],
+        lines: bub([prof.gwan >= 2 ? '관성이 ' + prof.gwan + '개라 조직에서 자리를 잡는 쪽이 편하네.'
+          : prof.gwan === 0 ? '관성이 없으니 남 밑에 오래 있기는 답답한 사주일세.'
+            : '관성이 적당해 조직과 독립을 골라도 되네.',
+        chart.strength === '신강' ? '밀 힘은 있으니 사람 쓰는 법과 돈 관리부터 배우게.' : '혼자 다 떠안지 않게 동료와 시스템부터 만들게.'], ['독립'])
+      },
+      'm-invest': {
+        id: 'm-invest', shot: 'mid', face: 'r', mood: 'blue',
+        chips: ['투자 성향', '기신 ' + y.gisin, y.group === '재성' ? '내 수입원' : '분산'],
+        lines: bub([speak(firstSentence(DG.invest)),
+          y.group === '재성' ? '용신이 재성이라 내가 만든 수입원이 답일세.' : '잘 모르는 자산은 비중을 확 줄이게.'], ['투자'])
+      },
+      'm-timing': {
+        id: 'm-timing', shot: 'sky', face: 'l', mood: 'night',
+        chips: ['2027 ' + y27.ganzi, y27.ganSipsin + ' 운', cur ? '대운 ' + cur.ganzi : '대운 전'],
+        lines: bub([cur ? (prof.daeunTalk[cur.ganSipsin] || '지금 ' + cur.ganzi + ' 대운 흐름일세.') : '아직 대운이 열리기 전, 기반을 다지는 때일세.',
+          '2027년은 ' + y27.ganSipsin + ' 운, ' + money27Line(y27)], ['2027년'])
+      },
+      'm-move': {
+        id: 'm-move', shot: 'mid', face: 'r', mood: 'blue',
+        chips: ['움직일 때', '버틸 때', '2027 ' + y27.ganzi],
+        lines: bub(['움직이는 때는 ' + (cur ? cur.ganSipsin + ' 대운이 끝나기 전' : '대운이 바뀌는 해') + '일세.',
+          '2027년은 ' + (y27.ganSipsin === '정관' || y27.ganSipsin === '편관' ? '자리가 오르니 옮길 명분이 생기네.' : '준비를 마치고 판을 저울질하기 좋은 해일세.')], ['움직이는 때'])
+      },
+      'm-career': {
+        id: 'm-career', shot: 'close', face: 'r', mood: 'sand',
+        chips: ['피할 자리', '성공 환경', y.elem + ' 기운'],
+        lines: bub(['연봉보다 환경부터 보게.', speak(firstSentence(DG.avoid))], ['환경'])
+      },
+      'm-jend': {
+        id: 'm-jend', shot: 'sky', face: 'l', mood: 'jade',
+        chips: ['한 줄 정리', jobs[0], chart.strength],
+        lines: bub(['정리하면 ' + jobs[0] + ' 쪽에서 ' + c.g.strength + '이 터지는 사주일세.',
+          prof.gwan >= 1 ? '조직에서 자리를 밟은 뒤 움직이게.' : '내 이름을 건 일로 바로 나가게.'], [jobs[0]])
+      },
+      'm-advice': {
+        id: 'm-advice', shot: 'mid', face: 'r', mood: 'jade',
+        chips: ['통장 셋', '자동이체', y.gisin + ' 지출 상한'],
+        lines: bub(['생활비·비상금·투자, 통장 셋으로 나누게.', eul(y.gisin) + ' 키우는 지출엔 상한을 두게.'], ['통장 셋'])
+      },
+      'm-end': {
+        id: 'm-end', shot: 'sky', face: 'l', mood: 'gold',
+        chips: ['한 줄 정리', '재물 그릇', '재성 ' + prof.jae + '개'],
+        lines: bub(['정리하면 ' + (prof.jae === 0 ? '막는 힘' : '한 우물') + '에서 돈이 모이는 사주일세.',
+          prof.gwan >= 1 ? '조직의 자리를 밟아 올라가며 모으게.' : '내 이름을 건 일에서 단가를 올리게.'], ['한 우물'])
+      }
+    };
+
+    var order = ({
+      'money-main': ['m-habit', 'm-leak', 'm-bowl', 'm-invest', 'm-timing', 'm-advice', 'm-end'],
+      'money-job': ['m-work', 'm-org', 'm-career', 'm-bowl', 'm-timing', 'm-jend'],
+      'money-move': ['m-timing', 'm-move', 'm-org', 'm-work', 'm-career', 'm-jend'],
+      'money-side': ['m-habit', 'm-leak', 'm-bowl', 'm-org', 'm-timing', 'm-advice', 'm-end']
+    })[theme.key] || ['m-habit', 'm-leak', 'm-bowl', 'm-invest', 'm-timing', 'm-advice', 'm-end'];
+
+    var ask = theme.key === 'money-move' ? { 'm-timing': '지금 움직여도 될까?', 'm-move': '언제가 좋을까?' }
+      : theme.key === 'money-job' ? { 'm-timing': '언제 옮기는 게 좋아?' }
+        : theme.key === 'money-side' ? { 'm-org': '혼자 벌어도 될까?' } : null;
+    return assemble(c, map, order, MONEY_ASK, ask);
+  }
+
+  /* ---------- 팩폭·성격 : 내면 → 급소 → 새는 습관 → 멘탈 → 반전 무기 ---------- */
+  var PACKPOK_ASK = {
+    'p-inner': '내 속마음은?',
+    'p-caution': '내 급소가 뭐야?',
+    'p-drain': '뭐가 발목 잡아?',
+    'p-mental': '멘탈 관리법은?',
+    'p-weapon': '내 반전 무기는?',
+    'p-fix': '한 줄 처방 해줘',
+    'p-relation': '인간관계 패턴은?',
+    'p-end': '한 줄로 정리해줘'
+  };
+
+  function packpokBeats(chart, theme) {
+    var c = themeCtx(chart, theme);
+    var prof = c.prof, DG = prof.deepGan, DJ = prof.deepJi, TS = prof.sipsin, y = c.y;
+    var EI = prof.elementInfo;
+
+    var map = {
+      'p-inner': {
+        id: 'p-inner', shot: 'close', face: 'l', mood: 'violet',
+        chips: ['내면', DG.words[0], DG.words[1]],
+        lines: bub([DG.talk, speak(firstSentence(DJ.innerWorld))], ['속'])
+      },
+      'p-caution': {
+        id: 'p-caution', shot: 'mid', face: 'r', mood: 'crimson',
+        chips: ['급소', TS.weak, DG.words[2]],
+        lines: bub(['가장 조심할 흠은 ' + TS.weak + '일세.', speak(firstSentence(DG.stress))], [TS.weak])
+      },
+      'p-drain': {
+        id: 'p-drain', shot: 'close', face: 'l', mood: 'gold',
+        chips: ['새는 습관', TS.weak, '기신 ' + y.gisin],
+        lines: bub(['무기를 깎아먹는 습관은 ' + prof.gisinDeep.avoidPattern + '일세.', '그게 ' + TS.weak + '을 키우네.'], [TS.weak])
+      },
+      'p-mental': {
+        id: 'p-mental', shot: 'sky', face: 'r', mood: 'jade',
+        chips: ['멘탈 관리', '용신 ' + y.elem, EI.color],
+        lines: bub([speak(EI.advice), '색은 ' + EI.color + ', 방향은 ' + EI.place + '일세.'], [EI.color])
+      },
+      'p-weapon': {
+        id: 'p-weapon', shot: 'mid', face: 'l', mood: 'dawn',
+        chips: ['반전 무기', c.g.short, DG.words[0]],
+        lines: bub(['반전 무기는 ' + c.g.strength + '일세.', speak(firstSentence(TS.mind))], [c.g.strength])
+      },
+      'p-fix': {
+        id: 'p-fix', shot: 'mid', face: 'r', mood: 'sand',
+        chips: ['한 줄 처방', y.elem + ' 기운', '매일 하나'],
+        lines: bub([speak(firstSentence(DG.fix)), '이 한 가지만 피해도 절반은 개운되네.'], ['개운'])
+      },
+      'p-relation': {
+        id: 'p-relation', shot: 'mid', face: 'l', mood: 'rose',
+        chips: ['인간관계', c.ji.keyword, '갈등 포인트'],
+        lines: bub([DJ.talk, speak(firstSentence(DJ.conflict))], ['관계'])
+      },
+      'p-end': {
+        id: 'p-end', shot: 'sky', face: 'r', mood: 'violet',
+        chips: ['한 줄 정리', TS.weak, DG.words[0]],
+        lines: bub(['정리하면 ' + TS.weak + '만 피하면 ' + DG.words[0] + '이 살아나는 사주일세.',
+          '성격을 고치지 말고 상황을 피하게.'], [TS.weak])
+      }
+    };
+
+    var order = ({
+      'packpok-main': ['p-inner', 'p-caution', 'p-drain', 'p-mental', 'p-weapon', 'p-fix', 'p-end'],
+      'packpok-weapon': ['p-weapon', 'p-inner', 'p-caution', 'p-drain', 'p-mental', 'p-fix', 'p-end'],
+      'packpok-relation': ['p-relation', 'p-inner', 'p-caution', 'p-drain', 'p-mental', 'p-fix', 'p-end']
+    })[theme.key] || ['p-inner', 'p-caution', 'p-drain', 'p-mental', 'p-weapon', 'p-fix', 'p-end'];
+
+    return assemble(c, map, order, PACKPOK_ASK);
+  }
+
+  /* ---------- 신년·대운 : 2027 세운 → 대운 → 상·하반기 → 돈·인연 ---------- */
+  var NEWYEAR_CUT_ASK = {
+    'n-seun': '2027 총운부터',
+    'n-daeun': '대운은 어떻게 흘러?',
+    'n-half': '상·하반기 흐름은?',
+    'n-money': '2027 돈은?',
+    'n-love': '2027 인연은?',
+    'n-advice': '2027 개운 팁은?',
+    'n-end': '한 줄로 정리해줘'
+  };
+
+  function newyearCuts(chart, theme) {
+    var c = themeCtx(chart, theme);
+    var prof = c.prof, y = c.y, y27 = c.y27, cur = c.cur, nxt = c.nxt, EI = prof.elementInfo;
+    var loveHit = loveHit27(chart, y27);
+
+    var map = {
+      'n-seun': {
+        id: 'n-seun', shot: 'close', face: 'r', mood: 'gold',
+        chips: ['2027 정미', y27.ganSipsin + ' 운', y27.jiSipsin + ' 운'],
+        lines: bub(['2027년은 정미(丁未)년, ' + y27.ganSipsin + ' 운이 들어오는 해일세.',
+          speak(firstSentence(c.F.YEAR2027[y27.ganSipsin])).replace(/^2027년은 /, '')], ['2027년'])
+      },
+      'n-daeun': {
+        id: 'n-daeun', shot: 'sky', face: 'l', mood: 'indigo',
+        chips: [cur ? '대운 ' + cur.ganzi : '대운 전', nxt ? '다음 ' + nxt.ganzi : '다음 판', chart.daeun.dirText + ' 대운'],
+        lines: bub([cur ? '지금은 ' + cur.ganzi + ' 대운, ' + cur.ganSipsin + ' 흐름일세.' : '아직 대운이 열리기 전일세.',
+          nxt ? '다음 판은 ' + nxt.startAge + '세 ' + nxt.ganzi + ' 대운에 열리네.' : '10년마다 판이 바뀌니 조급해할 것 없네.'], [nxt ? nxt.ganzi : ''])
+      },
+      'n-half': {
+        id: 'n-half', shot: 'mid', face: 'l', mood: 'jade',
+        chips: ['상반기 실행', '하반기 정리', '2027 흐름'],
+        lines: bub(['상반기 1~3월은 준비, 4~6월은 실행일세.', '하반기 7~9월은 결과, 10~12월은 정리일세.'], ['입춘'])
+      },
+      'n-money': {
+        id: 'n-money', shot: 'close', face: 'r', mood: 'sand',
+        chips: ['2027 재물', y27.ganSipsin, y27.jiSipsin],
+        lines: bub(['2027년은 ' + y27.ganSipsin + ' 운, ' + money27Line(y27),
+          '지지 ' + y27.jiSipsin + ' 기운도 함께 오네.'], ['2027년'])
+      },
+      'n-love': {
+        id: 'n-love', shot: 'mid', face: 'l', mood: 'rose',
+        chips: ['2027 인연', y27.ganSipsin, '배우자성 ' + (chart.input.gender === 'm' ? '재성' : '관성')],
+        lines: loveHit
+          ? bub(['2027년은 인연의 문이 열리는 해일세.', '나가는 자리를 만들면 사람이 따라오네.'], ['인연의 문'])
+          : bub(['2027년은 인연의 문이 크게 열리진 않네.', '내 자리를 다지면 만남의 질이 달라지지.'], ['인연'])
+      },
+      'n-advice': {
+        id: 'n-advice', shot: 'mid', face: 'r', mood: 'jade',
+        chips: ['개운', y.elem + ' 기운', EI.color],
+        lines: bub([speak(EI.advice), '색은 ' + EI.color + ', 방향은 ' + EI.place + '일세.'], [EI.color])
+      },
+      'n-end': {
+        id: 'n-end', shot: 'sky', face: 'l', mood: 'dawn',
+        chips: ['한 줄 정리', y27.ganzi + '년', y.elem + ' 기운'],
+        lines: bub(['정리하면 ' + y.elem + ' 기운을 키우는 해일세.', '상반기에 벌이고, 하반기에 매듭짓게.'], [y.elem + ' 기운'])
+      }
+    };
+
+    var order = ({
+      'newyear-main': ['n-seun', 'n-half', 'n-money', 'n-love', 'n-advice', 'n-end'],
+      'newyear-daeun': ['n-daeun', 'n-seun', 'n-half', 'n-money', 'n-advice', 'n-end']
+    })[theme.key] || ['n-seun', 'n-half', 'n-money', 'n-love', 'n-advice', 'n-end'];
+
+    var ask = theme.key === 'newyear-daeun' ? { 'n-seun': '2027년은 어때?' } : null;
+    return assemble(c, map, order, NEWYEAR_CUT_ASK, ask);
+  }
+
+  var FLOW_OF_CAT = { love: loveBeats, money: moneyBeats, packpok: packpokBeats, newyear: newyearCuts };
+
+  /* 테마 카테고리별 전용 대본으로 갈라보내고, 정통·총운은 기존 코스로 */
+  function indexBeats(chart, themeKey) {
+    var T = global.Themes;
+    var theme = themeKey && T && T.map[themeKey] ? T.map[themeKey] : null;
+    var flow = theme && FLOW_OF_CAT[theme.cat];
+    if (flow) {
+      try {
+        var beats = flow(chart, theme);
+        if (beats && beats.length) {
+          return { cast: CAST_OF_CAT[theme.cat] || 'doryeong', role: theme.catLabel, beats: beats };
+        }
+      } catch (err) {
+        if (global.console && global.console.error) global.console.error('[story:theme]', err);
+      }
+    }
+    return indexBeatsJeontong(chart, themeKey);
   }
 
   /* ---------- 대화 대본 만들기 : 궁합 ---------- */

@@ -325,5 +325,108 @@ eq('여러 사주에서도 2027 대본 정상', yearOk, true);
 const joined = [].concat.apply([], Story.compatBeats(cpA, cpB, cr).beats.map(function (b) { return b.lines; })).join(' ');
 eq('궁합 대본 조사 오류 없음(/이규호(은|이|과|을)|수진(는|가|와|를)/)', /이규호(은|이|과|을)|수진(는|가|와|를)/.test(joined), false);
 
+console.log('\n[13] 테마별 컷 흐름 (정통·연애·재물·팩폭·신년이 서로 다른 대본)');
+require('../js/themes.js');
+const TH = global.Themes;
+
+function themeBeatCheck(label, chart, key) {
+  const pack = Story.indexBeats(chart, key);
+  const beats = (pack && pack.beats) || [];
+  let empty = 0, tooLong = 0, bad = 0, noChips = 0, two = 0;
+  beats.forEach(function (b) {
+    if (!b.chips || !b.chips.length) noChips++;
+    if (!b.lines || !b.lines.length) { empty++; return; }
+    if (b.lines.length === 2) two++;
+    b.lines.forEach(function (l) {
+      const plain = String(l || '').replace(/\*\*/g, '').trim();
+      if (!plain) empty++;
+      if (plain.length > 58) tooLong++;
+      if (/undefined|NaN|\[object/.test(plain)) bad++;
+    });
+    (b.chips || []).forEach(function (c) { if (/undefined|NaN|\[object/.test(String(c))) bad++; });
+  });
+  eq(label + ' 컷 8~14', beats.length >= 8 && beats.length <= 14, true);
+  eq(label + ' id 중복 없음', new Set(beats.map(function (b) { return b.id; })).size === beats.length, true);
+  eq(label + ' 빈 대사 없음', empty, 0);
+  eq(label + ' 말풍선 58자 이하', tooLong, 0);
+  eq(label + ' placeholder 없음', bad, 0);
+  eq(label + ' 칩 비어있지 않음', noChips, 0);
+  eq(label + ' 두 마디 컷 3개 이상', two >= 3, true);
+  eq(label + ' 첫 컷은 선택지 없음', !beats[0].ask, true);
+  eq(label + ' 마지막 컷 CTA 3개', (beats[beats.length - 1].actions || []).length, 3);
+  eq(label + ' 테마 선택지 5개 이상', beats.filter(function (b) { return b.ask; }).length >= 5, true);
+  return pack;
+}
+
+/* 한 사주에서 대표 테마를 모두 돌려 본다 */
+const themeKeys = TH.list.filter(function (t) { return !t.href; }).map(function (t) { return t.key; });
+let themeAllOk = true;
+themeKeys.forEach(function (k) {
+  const p = Story.indexBeats(cpA, k);
+  if (!p || !p.beats || p.beats.length < 8) themeAllOk = false;
+  if (p.beats.some(function (b) {
+    return !b.lines.length || b.lines.some(function (l) { return !String(l).replace(/\*\*/g, '').trim() || /undefined|NaN/.test(l); });
+  })) themeAllOk = false;
+});
+eq('모든 테마 카드에 대본 있음', themeAllOk, true);
+eq('테마 카드 수 17', themeKeys.length, 17);
+
+/* 여러 사주에서도 빈 대사·undefined 가 없는지 */
+let themeStress = true;
+for (let y = 1962; y <= 2010; y += 8) {
+  for (let gidx = 0; gidx < 2; gidx++) {
+    const cc = bd({ year: y, month: (y % 12) + 1, day: 14, hour: gidx ? null : 9, gender: gidx ? 'f' : 'm' });
+    themeKeys.forEach(function (k) {
+      const p = Story.indexBeats(cc, k);
+      if (!p || !p.beats || p.beats.length < 8) themeStress = false;
+      p.beats.forEach(function (b) {
+        if (!b.lines || !b.lines.length) themeStress = false;
+        b.lines.forEach(function (l) {
+          const plain = String(l || '').replace(/\*\*/g, '').trim();
+          if (!plain || /undefined|NaN|\[object/.test(plain)) themeStress = false;
+        });
+        (b.chips || []).forEach(function (c) { if (/undefined|NaN/.test(String(c))) themeStress = false; });
+      });
+    });
+  }
+}
+eq('여러 사주에서도 테마 대본 정상', themeStress, true);
+
+/* 카테고리가 다르면 2~6번 컷이 통째로 달라야 한다 */
+function flowCuts(key, n) {
+  return Story.indexBeats(cpA, key).beats.slice(1, n || 6);
+}
+function flowText(key, n) { return flowCuts(key, n).map(function (b) { return b.lines.join(' '); }).join(' '); }
+const fSpouse = flowCuts('love-spouse'), fMoney = flowCuts('money-main'), fJeon = flowCuts('jeontong-total');
+eq('배우자상 2번 컷은 배우자 자리', fSpouse[0].id, 'l-seat');
+eq('재물운 2번 컷은 돈 습관', fMoney[0].id, 'm-habit');
+eq('정통사주 2번 컷은 인사', fJeon[0].id, 'hello');
+eq('배우자상·재물운 2~6컷 대사 다름', flowText('love-spouse') === flowText('money-main'), false);
+eq('재물운·정통 2~6컷 대사 다름', flowText('money-main') === flowText('jeontong-total'), false);
+eq('배우자상·정통 2~6컷 대사 다름', flowText('love-spouse') === flowText('jeontong-total'), false);
+const spouseLines = flowText('love-spouse').replace(/\*\*/g, '');
+const moneyLines = flowText('money-main').replace(/\*\*/g, '');
+const jeonLines = flowText('jeontong-total').replace(/\*\*/g, '');
+eq('배우자상 흐름에 직업·재물 얘기 없음', /직업|재물|월급|사업/.test(spouseLines), false);
+eq('재물 흐름에 연애·결혼 얘기 없음', /연애|배우자|결혼|인연|썸/.test(moneyLines), false);
+const jeonIds = Story.indexBeats(cpA, 'jeontong-total').beats.map(function (b) { return b.id; });
+eq('정통 흐름은 종합 코스 유지',
+  ['hello', 'pillars', 'summary', 'personality', 'elem', 'money', 'job', 'love', 'daeun', 'year2027', 'remedy', 'closing']
+    .every(function (id) { return jeonIds.indexOf(id) >= 0; }), true);
+eq('정통 흐름에 테마 전용 컷 없음', /^[lmpn]-/.test(jeonIds.join(',')), false);
+
+/* 테마별 선택지도 그 테마 언어를 써야 한다 */
+const spouseAsk = Story.indexBeats(cpA, 'love-spouse').beats.filter(function (b) { return b.ask; }).map(function (b) { return b.ask; }).join(' ');
+const moneyAsk = Story.indexBeats(cpA, 'money-main').beats.filter(function (b) { return b.ask; }).map(function (b) { return b.ask; }).join(' ');
+eq('연애 테마 선택지에 배우자·인연', /배우자|인연/.test(spouseAsk), true);
+eq('재물 테마 선택지에 돈·재물', /돈|재물/.test(moneyAsk), true);
+eq('연애·재물 선택지 서로 다름', spouseAsk === moneyAsk, false);
+
+themeBeatCheck('배우자상', cpA, 'love-spouse');
+themeBeatCheck('재물운', cpA, 'money-main');
+themeBeatCheck('팩폭', cpA, 'packpok-main');
+themeBeatCheck('2027 신년', cpA, 'newyear-main');
+themeBeatCheck('정통사주', cpA, 'jeontong-total');
+
 console.log('\n' + (fail === 0 ? '✅ 전체 통과 (실패 0)' : '❌ 실패 ' + fail + '건'));
 process.exit(fail === 0 ? 0 : 1);

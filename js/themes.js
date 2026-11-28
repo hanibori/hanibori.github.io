@@ -207,7 +207,7 @@
       case 'packpok-weapon':
         return '무기는 ' + g.strength + '일세. 이건 억지로 만드는 게 아니라 이미 손에 있는 도구라, 쓸 줄만 알면 되네. 급소도 함께 알려주지.';
       case 'packpok-relation':
-        return '일지 ' + josa(j.name, '이', '가') + ' 관계의 자리일세. 이 사주는 ' + j.caution + ' 가까운 사람에게 특히 그 결이 나오지.';
+        return '일지 ' + josa(j.name, '이', '가') + ' 관계의 자리일세. 이 사주의 결은 가까운 사람에게 특히 진하게 나오지. 말의 온도부터 살피게.';
       case 'newyear-main':
         return '2027년은 정미(丁未)년, 붉은 양의 해일세. 자네 일간 기준으로 ' + y27.ganSipsin + '(' + F.SIPSIN[y27.ganSipsin].hanja + ') 운이 들어오네. ' + F.YEAR2027[y27.ganSipsin] + ' 상·하반기를 나눠 짚어주지.';
       case 'newyear-daeun':
